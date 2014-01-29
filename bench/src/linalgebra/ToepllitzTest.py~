@@ -1,0 +1,15 @@
+
+from imports import *
+#from linalgebra import ToeplitzRecursion
+
+def main(args):
+  g = [1,2,3,4,5]
+  r = [1,1,1,1,1]
+  f = ToeplitzRecursion(r,g)
+  print "hi"
+  plotSequence(f,"Solution")
+
+def plotSequence(x,title):
+  sp = SimplePlot.asPoints(x)
+  if title:
+    sp.setTitle(title) 

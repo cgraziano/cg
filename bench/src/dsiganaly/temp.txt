@@ -1,0 +1,300 @@
+/****************************************************************************
+Copyright (c) 2013, Colorado School of Mines and others. All rights reserved.
+This program and accompanying materials are made available under the terms of
+the Common Public License - v1.0, which accompanies this distribution, and is
+available at http://www.eclipse.org/legal/cpl-v10.html
+****************************************************************************/
+package dsiganaly;
+import static edu.mines.jtk.util.ArrayMath.*;
+import static edu.mines.jtk.dsp.Conv.*;
+import edu.mines.jtk.dsp.Sampling;
+import linalgebra.ToeplitzRecursion;
+import edu.mines.jtk.mosaic.SimplePlot;
+ 
+
+
+/**
+ * Computes the prediction operator coefficients and therefore the 
+ * prediction error operator coefficients for a lag distance of 1, which
+ * means the prediction error coefficents are the inverse of the wavelet
+ * in the seismic trace.
+ * @author Chris Graziano, CWP
+ * @version 2013.11.18
+ */
+public class PredDecon {
+  
+  /**
+   * Calculates the prediction error operator
+   * coefficients from the input signal and the number of coefficients
+   * that wish to be calculated. 
+   * Note: The first prediction error coefficient is 1.
+   * This particular method only operates
+   * on a single signal. 
+   * @param x the input signal 
+   * @param kx the sample index of x[0]
+   * @param na number of prediction error coefficients to be calculated
+   */
+  public PredDecon(float[] x, int npec) {
+    int nx = x.length;
+    int kr = 0;
+    //According to Taner and Robinson, only autocorrelation coefficients r0
+    //through rn-1 are in the Toeplitz matrix, while the right hand side
+    //vector includes coefficients r1 through rn. This yields n-1 prediction
+    //operator coefficents, but these coefficients yield n prediction error
+    //operator coefficients, which is why the number of autocorrelation
+    //coefficients) is na.
+    int nr = npec;
+    float[] r = new float[nr];//0 to n lag autocorrelation coefficients
+    nx = x.length;
+    int kx = 0;
+    xcor(nx,kx,x,nx,kx,x,nr,0,r);
+    dump(r);
+    SimplePlot.asPoints(r);
+
+    //the first row of the toeplitz matrix needed to calculate the
+    //prediction operator coefficients, will contain r0 to rn-1
+    int nrm1 = nr-1;
+    float[] toepRow1 = new float[nrm1];
+
+    //The right hand side of the linear equations Ra=b to compute
+    //prediction operator coefficients, will contain r1 to rn 
+    //autocorrelation coefficients
+    float[] g = new float[nrm1];
+
+    //Fill toepRow1 and b with the corresponding autocorrelation 
+    //coefficients
+    for (int i=0; i<nrm1; ++i) {
+      toepRow1[i] = r[i  ];
+      g[i]        = r[i+1];
+    }
+
+    //Solve for the prediction coefficients that minimize the 
+    //squared error between the predicted x value and the actual x 
+    //value for each sample of the x array.
+    _pc = ToeplitzRecursion.solve(toepRow1,g);
+    int npc = _pc.length;
+
+    //create prediction error coefficients from the prediction
+    //coefficients
+    _pec = new float[npec];
+    _pec[0] = 1.0f;
+    for (int i=1; i<npec; ++i) 
+      _pec[i] = -_pc[i-1];
+  }
+
+  /**
+   * Calculates the prediction error operator
+   * coefficients from the input gather and the number of coefficients
+   * that wish to be calculated. 
+   * Note: The first prediction error coefficient is 1.
+   * This particular method only operates
+   * on a single gather. 
+   * @param x the input signal 
+   * @param kx the sample index of x[0]
+   * @param na number of prediction error coefficients to be calculated
+   */
+  public PredDecon(float[][] x, int npec) {
+    int nx = x.length;
+    //According to Taner and Robinson, only autocorrelation coefficients r0
+    //through rn-1 are in the Toeplitz matrix, while the right hand side
+    //vector includes coefficients r1 through rn. This yields n-1 prediction
+    //operator coefficents, but these coefficients yield n prediction error
+    //operator coefficients, which is why the number of autocorrelation
+    //coefficients) is na.
+    int nr = npec;
+    float[] r = getAutoCorrGather1(x,nr);
+
+    //the first row of the toeplitz matrix needed to calculate the
+    //prediction operator coefficients, will contain r0 to rn-1
+    int nrm1 = nr-1;
+    float[] toepRow1 = new float[nrm1];
+
+    //The right hand side of the linear equations Ra=b to compute
+    //prediction operator coefficients, will contain r1 to rn 
+    //autocorrelation coefficients
+    float[] g = new float[nrm1];
+
+    //Fill toepRow1 and b with the corresponding autocorrelation 
+    //coefficients
+    for (int i=0; i<nrm1; ++i) {
+      toepRow1[i] = r[i  ];
+      g[i]        = r[i+1];
+    }
+
+    //Solve for the prediction coefficients that minimize the 
+    //squared error between the predicted x value and the actual x 
+    //value for each sample of the x array.
+    _pc = ToeplitzRecursion.solve(toepRow1,g);
+    int npc = _pc.length;
+
+    //create prediction error coefficients from the prediction
+    //coefficients
+    _pec = new float[npec];
+    _pec[0] = 1.0f;
+    for (int i=1; i<npec; ++i) 
+      _pec[i] = -_pc[i-1];
+  }
+
+  /**
+   * Give a trace a range of a1 and a2 inverse wavelet coeffiecient
+   * values or prediction error operator coefficients, will compute
+   * the objective function at different points of a1 and a2.
+   * For testing and understanding!
+   * @param x input trace
+   * @param a1 first inverse coefficient
+   * @param a2 second inverse coefficient
+   */
+  public static float[][] constructObjFunction(float[] x, 
+      Sampling sa1, Sampling sa2) {
+    int nt = x.length;
+    int na1 = sa1.getCount();
+    float da1 = (float) (sa1.getDelta());
+    float fa1 = (float) (sa1.getFirst());
+    int na2 = sa2.getCount();
+    float da2 = (float) (sa2.getDelta());
+    float fa2 = (float) (sa2.getFirst());
+
+    float[][] obf = new float[na2][na1];
+
+    float a1 = 0.0f;
+    float a2 = 0.0f;
+    int na = 3;
+    float[] a = new float[na];
+    a[0] = 1.0f;
+    float sumE = 0.0f;
+    float[] y = new float[nt];
+    float yt = 0.0f;
+    for (int ia1=0; ia1<na1; ++ia1) { 
+      a1 = fa1+da1*ia1;
+      a[1] = a1;
+      for (int ia2=0; ia2<na2; ++ia2) {
+        a2 = fa2+da2*ia2;
+        a[2] = a2;
+        conv(na,0,a,nt,0,x,nt,0,y);
+        for (int t=0; t<nt; ++t) {
+          yt = y[t]; 
+          sumE += yt*yt;
+        }
+        obf[ia2][ia1] = sumE;
+        sumE = 0.0f;
+      }
+    }
+    
+    return obf;
+  } 
+
+  /**
+   * Give a gather a range of a1 and a2 inverse wavelet coeffiecient
+   * values or prediction error operator coefficients, will compute
+   * the objective function at different points of a1 and a2.
+   * For testing and understanding!
+   * @param f input gather 
+   * @param a1 first inverse coefficient
+   * @param a2 second inverse coefficient
+   */
+  public static float[][] constructObjFunction(float[][] f, 
+      Sampling sa1, Sampling sa2) {
+    int nx = f.length;
+    int nt = f[0].length;
+    int na1 = sa1.getCount();
+    float da1 = (float) (sa1.getDelta());
+    float fa1 = (float) (sa1.getFirst());
+    int na2 = sa2.getCount();
+    float da2 = (float) (sa2.getDelta());
+    float fa2 = (float) (sa2.getFirst());
+
+    float[][] obf = new float[na2][na1];
+    float[][] fa = new float[nx][nt];//Convolution of a's with gather
+    float[] fax = new float[nt];//fa summed across the offsets
+
+    float a1 = 0.0f;
+    float a2 = 0.0f;
+    int na = 3;
+    float[] a = new float[na];
+    a[0] = 1.0f;
+    float sumE = 0.0f;
+    float[] y = new float[nt];
+    float yt = 0.0f;
+    for (int ia1=0; ia1<na1; ++ia1) { 
+      a1 = fa1+da1*ia1;
+      a[1] = a1;
+      for (int ia2=0; ia2<na2; ++ia2) {
+        a2 = fa2+da2*ia2;
+        a[2] = a2;
+        for (int x=0; x<nx; ++x) {
+          conv(na,0,a,nt,0,f[x],nt,0,fa[x]);
+        }
+        if (ia1 == 2 && ia2 == 2) {
+          conv(na,0,a,nt,0,f[0],nt,0,fa[0]);
+          SimplePlot.asPoints(fa[0]);
+          SimplePlot.asPoints(f[0]);
+        }
+        for (int x=0; x<nx; ++x) {
+          add(fax,f[x],fax);
+        }
+        for (int t=0; t<nt; ++t) {
+          yt = fax[t]; 
+          sumE += yt*yt;
+
+        }
+        obf[ia2][ia1] = sumE;
+        sumE = 0.0f;
+      }
+    }
+    
+    return obf;
+  } 
+
+  public float[] getPredErrorCoef() {
+    return _pec;
+  }
+
+  public float[] getPredCoef() {
+    return _pc;
+  }
+
+  /**
+   * This method defines the autocorrelation of the
+   * gather as the sum of the autocorrelations of each
+   * trace in the gather
+   * @param f gather
+   * @param lag number of autocorrelation coefficients
+   */
+  private float[] getAutoCorrGather1(float[][] f,int lag) {
+    int nx = f.length;
+    int nt = f[0].length;
+    int kt = 0;
+
+    float[] r = new float[lag];
+    float[] rsum = new float[lag];
+    int kr = 0;
+    for (int x=0; x<nx; ++x) {
+      xcor(nt,kt,f[x],nt,kt,f[x],lag,kr,r);
+      add(rsum,r,rsum);
+    }
+    return rsum;
+  }
+  /**
+   * This method defines the autocorrelation of the
+   * gather as the autocorrelation of the sum of the gather 
+   * int the 2nd dimension(offset)
+   * @param f gather
+   * @param lag number of autocorrelation coefficients
+   */
+  private float[] getAutoCorrGather2(float[][] f,int lag) {
+    int nx = f.length;
+    int nt = f[0].length;
+    int kt = 0;
+
+    float[] r = new float[lag];
+    float[] fsum = new float[nt];
+    int kr = 0;
+    for (int x=0; x<nx; ++x) {
+      add(fsum,f[x],fsum);
+    }
+    xcor(nt,kt,fsum,nt,kt,fsum,lag,kr,r);
+    return r;
+  }
+  private float[] _pec, _pc;
+}
+

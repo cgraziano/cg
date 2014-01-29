@@ -1,0 +1,169 @@
+/****************************************************************************
+Copyright (c) 2013, Colorado School of Mines and others. All rights reserved.
+This program and accompanying materials are made available under the terms of
+the Common Public License - v1.0, which accompanies this distribution, and is
+available at http://www.eclipse.org/legal/cpl-v10.html
+****************************************************************************/
+package linalgebra;
+
+/**
+ * Solves system of linear equations represented by Rf = g,
+ * where R is a Toeplitz matrix, f is a vector representing the uknown 
+ * quantities, and g is a vector representing the known quantities.
+ * The structure of the Toeplitz matrix allows us to only need the first
+ * column of the Toeplitz matrix for this algorithm, r = {r0,r1,r2,...,rm}.
+ *
+ * @author Chris Graziano, CWP
+ * @version 2013.10.09
+ */
+public class ToeplitzRecursion {
+
+  /**
+   * Sets up a Toeplitz Recursion algorithm for the given 
+   * Toeplitz matrix(R), unknown quantities(f), and known quantities(g).
+   * @param r 1st column of Toeplitz matrix, {r0,r1,r2,r3,...,rm},(m+1) x 1
+   * @param g known quantities, (m+1) x 1.
+   */
+  public ToeplitzRecursion(float[] r, float[] g) {
+    this.m = r.length-1;
+    this.r = r;
+    this.g = g;
+  }
+
+  /**
+   * Computes the solution to the system of linear equations that includes
+   * a Toeplitz matrix.
+   */
+  public float[] solve() {
+    //Set starting values for step n=0
+    float r0 = r[0];
+    float r1 = r[1]; 
+    float g0 = g[0];
+    float a00 = 1;
+    float alpha0 = r0;
+    float beta0 = r1;
+    float f00 = g0/r0;
+    float gamma0 = f00*r1;
+
+    //define values that will be reused in following loop
+    float k = 0;
+    float[] anm1 = {a00};
+    float[] an;
+    float[] fnm1 = {f00};
+    float[] fn = {0};//for initialization
+    float alpha = alpha0;
+    float beta = beta0;
+    float q = 0;
+    float gamma = f00*r1;
+
+
+//System.out.println("m = "+m);
+    //loop for n=1 to n=m-1
+    for (int n=1; n<m; ++n) {
+      //compute k for step n-1
+      k = -beta/alpha;
+
+      an = new float[n+1];
+      fn = new float[n+1];
+
+      //compute a coefficients for step n
+      an[0] = anm1[0];
+      an[(n+1)-1] = k*anm1[0];
+      for (int i=1; i<n; ++i) {
+        an[i] = anm1[i]+k*anm1[n-i];  
+      } 
+
+      //compute alpha for n
+      alpha = alpha+k*beta;
+
+      //compute beta for n
+      beta=0;
+      for (int i=1; i<=n+1; ++i) {
+        beta += an[(n+1)-i]*r[i];
+      }
+      
+
+      //compute q for step n-1
+      q = (g[n]-gamma)/alpha;
+
+      //compute f coefficients for step n
+      fn[n] = q*an[0];
+      for (int i=0; i<n; ++i) {
+        fn[i] = fnm1[i]+q*an[n-i];  
+      }
+
+      //compute gamma for n
+      gamma = 0;
+      for (int i=1; i<=n+1; ++i) {
+        gamma += fn[(n+1)-i]*r[i];
+      }
+
+      anm1 = new float[n+1];
+      fnm1 = new float[n+1];
+
+      //copy current arrays to previous arrays for next step
+      for (int i=0; i<n+1; ++i) {
+        anm1[i] = an[i];
+        fnm1[i] = fn[i];
+      }
+    }
+    //final step n=m
+    int n=m;
+
+//System.out.println("n = "+n);
+    //compute k for step n-1
+    k = -beta/alpha;
+//System.out.println("k = "+k);
+    
+
+    an = new float[n+1];
+    fn = new float[n+1];
+
+    //compute a coefficients for step n
+    an[0] = anm1[0];
+    an[(n+1)-1] = k*anm1[0];
+//System.out.println("a["+0+"] = "+an[0]);
+    for (int i=1; i<n; ++i) {
+      an[i] = anm1[i]+k*anm1[n-i];  
+    } 
+
+    //compute alpha for n
+    alpha = alpha+k*beta;
+
+    //compute beta for n
+    beta=0;
+    for (int i=1; i<n; ++i) {
+      beta += an[(n+1)-i]*r[i];
+    }
+    
+    for (int i=m; i>=1; --i) {
+      beta += an[(n+1)-i]*r[i];
+    } 
+
+    //compute q for step n-1
+    q = (g[n]-gamma)/alpha;
+
+    //compute f coefficients for step n
+    fn[n] = q*an[0];
+    for (int i=0; i<n; ++i) {
+      fn[i] = fnm1[i]+q*an[n-i];  
+    }
+
+    //compute gamma for n
+    gamma = 0;
+    for (int i=1; i<n; ++i) {
+      gamma += fn[(n+1)-i]*r[i];
+    }
+    for (int i=m; i>=1; --i) {
+      gamma += an[(n+1)-i]*r[i];
+    } 
+
+    return fn; 
+  }
+
+  private int m;
+  private float[] r, g;
+
+  
+}
+

@@ -1,0 +1,80 @@
+/****************************************************************************
+Copyright (c) 2013, Colorado School of Mines and others. All rights reserved.
+This program and accompanying materials are made available under the terms of
+the Common Public License - v1.0, which accompanies this distribution, and is
+available at http://www.eclipse.org/legal/cpl-v10.html
+****************************************************************************/
+package linalgebra;
+
+/**
+ * Solves system of linear equations represented by Rf = g,
+ * where R is a Toeplitz matrix, f is a vector representing the uknown 
+ * quantities, and g is a vector representing the known quantities.
+ * The structure of the Toeplitz matrix allows us to only need the first
+ * column of the Toeplitz matrix for this algorithm, r = {r0,r1,r2,...,rm}.
+ *
+ * @author Chris Graziano, CWP
+ * @version 2013.10.09
+ */
+public class ToeplitzRecursion {
+
+  /**
+   * Sets up a Toeplitz Recursion algorithm for the given 
+   * Toeplitz matrix(R), unknown quantities(f), and known quantities(g).
+   * @param r 1st column of Toeplitz matrix, {r0,r1,r2,r3,...,rm},(m+1) x 1
+   * @param g known quantities, (m+1) x 1.
+   */
+  public ToeplitzRecursion(float[] r, float[] g) {
+    this.m = r.length;
+    this.r = r;
+    this.g = g;
+  }
+
+  /**
+   * Computes the solution to the system of linear equations that includes
+   * a Toeplitz matrix.
+   */
+  public float[] solve() {
+    //Set starting values for step n=0
+    float r0 = r[0];
+    float r1 = r[1]; 
+    float a00 = 1;
+    float alpha0 = r0;
+    float beta0 = r1;
+    float f00 = g[0]/r[0];
+    float gamma0 = f00*r1;
+
+    //define values that will be reused in following loop
+    float k = 0;
+    float[] aprev = {a00};
+    float[] acurr;
+    float alpha = alpha0;
+    float beta = beta0;
+    float q = 0;
+    float gamma = 0;
+
+    //loop for n=1 to n=m
+    for (int n=1; n<=m; ++n) {
+      //compute k[n-1]
+      k = -beta/alpha;
+
+      acurr = new float[n+1];
+
+      //compute a coefficients
+      for (int i=0; i<=n; ++i) {
+        acurr[i] = 1;  
+      }
+      
+    }
+
+
+
+    return g; 
+  }
+
+  private int m;
+  private float[] r, g;
+
+  
+}
+

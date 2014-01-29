@@ -1,0 +1,226 @@
+/****************************************************************************
+Copyright (c) 2013, Colorado School of Mines and others. All rights reserved.
+This program and accompanying materials are made available under the terms of
+the Common Public License - v1.0, which accompanies this distribution, and is
+available at http://www.eclipse.org/legal/cpl-v10.html
+****************************************************************************/
+package linalgebra;
+import static edu.mines.jtk.util.ArrayMath.*;
+
+/**
+ * Solves system of linear equations represented by Rf = g,
+ * where R is a Toeplitz matrix, f is a vector representing the uknown 
+ * quantities, and g is a vector representing the known quantities.
+ * The structure of the Toeplitz matrix allows us to only need the first
+ * column of the Toeplitz matrix for this algorithm, r = {r0,r1,r2,...,rm}.
+ * The matrix R should be nonsingular.
+ *   
+   |r0 r1 r2 rm||f0|  |g0|
+   |r1 r0 r1 r2||f1|  |g1|
+   |r2 r1 r0 r1||f2| =|g2|
+   |rm r2 r1 r0||fm|  |gm|
+ * @author Chris Graziano, CWP
+ * @version 2013.11.1
+ */
+public class ToeplitzRecursion {
+
+  /**
+   * Sets up a Toeplitz Recursion algorithm for the given 
+   * Toeplitz matrix(R), unknown quantities(f), and known quantities(g).
+   * NOTE: The r0 element of the Toeplitz matrix cannnot be zero.
+   * @param r 1st column(or row) of Toeplitz matrix, 
+   * {r0,r1,r2,r3,...,rm},(m+1) x 1
+   * @param g known quantities, (m+1) x 1.
+   */
+  public static float[] solve(float[] ri, float[] gi) {
+    double[] r = convertFtoD(ri);
+    double[] g = convertFtoD(gi);
+
+    int m = r.length-1;
+    //Set starting values for step n=0
+    double r0 = r[0];
+    double r1 = r[1]; 
+    double g0 = g[0];
+
+    //Step n=0
+    double[] anm1 = {1.0};//a00
+    double alphanm1 = r0;//alpha0
+    double betanm1 = r1;//beta0
+    double[] fnm1 = {g0/r0};//f00
+    double gammanm1 = fnm1[0]*r1;//gamma0
+
+    double k = 0.0;
+    double[] an;
+    double alpha = 0.0;
+    double beta = 0;
+    double q = 0.0;
+    double[] fn = {0.0};
+    double gamma = 0.0;
+    int np1 = 0;
+
+
+    //loop for n=1 to n=m-1
+    for (int n=1; n<m; ++n) {
+      //compute k for step n-1
+      k = -betanm1/alphanm1;
+      
+
+      np1 = n+1;
+      an = new double[np1];
+      fn = new double[np1];
+
+
+
+      //compute a coefficients for step n
+      an[0] = anm1[0];
+      for (int i=1; i<n; ++i) {
+        an[i] = anm1[i]+k*anm1[n-i];  
+      } 
+      an[np1-1] = k*anm1[0];
+      
+      //compute alpha for n
+      alpha = alphanm1+k*betanm1;
+
+
+      //compute beta for n
+      beta=0.0;
+      for (int i=0; i<=n; ++i) {
+        beta += an[i]*r[np1-i];
+      }
+      
+      //compute q for step n-1
+      q = (g[n]-gammanm1)/alpha;
+
+      //compute f coefficients for step n
+      for (int i=0; i<n; ++i) {
+        fn[i] = fnm1[i]+q*an[n-i];  
+      }
+      fn[n] = q*an[0];
+
+      //compute gamma for n
+      gamma = 0.0;
+      for (int i=0; i<=n; ++i) {
+        gamma += fn[i]*r[np1-i];
+      }
+
+      anm1 = new double[np1];
+      fnm1 = new double[np1];
+
+      //copy current arrays to previous arrays for next step
+      for (int i=0; i<np1; ++i) {
+        anm1[i] = an[i];
+        fnm1[i] = fn[i];
+      }
+      alphanm1 = alpha;
+      betanm1 = beta;
+      gammanm1 = gamma;
+
+    }
+    /////////////////final step n=m///////////////
+    int n=m;
+
+    //compute k for step n-1
+    k = -betanm1/alphanm1;
+    
+    an = new double[n+1];
+    fn = new double[n+1];
+
+    //compute a coefficients for step n
+    an[0] = anm1[0];
+    for (int i=1; i<n; ++i) {
+      an[i] = anm1[i]+k*anm1[n-i];  
+    } 
+    an[(n+1)-1] = k*anm1[0];
+
+    //compute alpha for n
+    alpha = alphanm1+k*betanm1;
+
+    //compute q for step n-1
+    q = (g[n]-gammanm1)/alpha;
+
+    //compute f coefficients for step n
+    fn[n] = q*an[0];
+    for (int i=0; i<n; ++i) {
+      fn[i] = fnm1[i]+q*an[n-i];  
+    }
+
+    return convertDtoF(fn); 
+  }
+
+  /**
+   * Sets up a Toeplitz Recursion algorithm for the given 
+   * Toeplitz matrix(R), unknown quantities(f), and known quantities(g).
+   * Claerbout
+   * NOTE: The r0 element of the Toeplitz matrix cannnot be zero.
+   * @param r 1st column(or row) of Toeplitz matrix, 
+   * {r0,r1,r2,r3,...,rm},(m+1) x 1
+   * @param g known quantities, (m+1) x 1.
+   */
+  public static float[] solveClaerbout(float[] ri, float[] gi) {
+    double[] r = convertFtoD(ri);
+    double[] g = convertFtoD(gi);
+    int n = r.length;
+
+    double[] a = new double[n];
+    double[] f = new double[n];
+    double e = 0;
+    double c = 0;
+    double bot = 0;
+    double w = 0;
+
+    //initialize a[0],v, and f[0]
+    a[0] = 1.0;
+    double v = r[0];
+    f[0] = g[0]/r[0];
+
+    //main loop of n steps
+    for (int j=1; j<n; ++j) {
+      a[j] = 0;
+      f[j] = 0;
+      e = 0;
+
+      for (int i=0; i<j; ++i) 
+        e += a[i]*r[j-i];
+
+      c = e/v;
+      v -= c*e;
+      for (int i=0; i<=j/2; ++i) {
+        bot = a[j-i]-c*a[i];
+        a[i] -= c*a[j-i];
+        a[j-i] = bot;
+      }
+
+      w=0;
+      for (int i=0; i<j; ++i) 
+        w += f[i]*r[j-i];
+
+      c = (w-g[j])/v;
+      for (int i=0; i<=j; ++i)
+        f[i] -= c*a[j-i];
+    }
+    return convertDtoF(f);
+  }
+
+  /**
+   * Convert float array to double array
+   */
+  private static double[] convertFtoD(float[] f) {
+    int n = f.length;
+    double[] d = new double[n];
+    for(int i=0; i<n; ++i) 
+      d[i] = f[i]; 
+    return d;
+  }
+
+  /**
+   * Convert double array to float array
+   */
+  private static float[] convertDtoF(double[] d) { 
+    int n = d.length;
+    float[] f = new float[n];
+    for(int i=0; i<n; ++i) 
+      f[i] = (float)d[i]; 
+    return f;
+  }
+}
+
