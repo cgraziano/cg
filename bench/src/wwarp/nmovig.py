@@ -105,16 +105,16 @@ def goEstimateWaveletFromVigGather():
 
 def getVikingGrabenCDP(icdp):
   if 145 <= icdp | icdp <= 147:
-    fileName = "C:/Users/Chris/Documents/CWP/Research/research/vikinggrabenCMP/cdp145_147.dat"
+    fileName = "/Users/Chris/data/vikinggrabenCMP/cdp145_147.dat"
     return getCDP(icdp, 145, fileName)
   elif 400 <= icdp | icdp <= 800:
-    fileName = "C:/Users/Chris/Documents/CWP/Research/research/vikinggrabenCMP/cdp400_800.dat"
+    fileName = "/Users/Chris/data/vikinggrabenCMP/cdp400_800.dat"
     return getCDP(icdp, 400, fileName)
   elif 1100 <= icdp | icdp <= 1500:
-    fileName = "C:/Users/Chris/Documents/CWP/Research/research/vikinggrabenCMP/cdp1100_1500.dat"
+    fileName = "/Users/Chris/data/vikinggrabenCMP/cdp1100_1500.dat"
     return getCDP(icdp, 1100, fileName)
   elif 1700 <= icdp | icdp <= 2000:
-    fileName = "C:/Users/Chris/Documents/CWP/Research/research/vikinggrabenCMP/cdp1700_2000.dat"
+    fileName = "/Users/Chris/data/vikinggrabenCMP/cdp1700_2000.dat"
     return getCDP(icdp, 1700, fileName)
   else:
     print "Requested CDP not available"

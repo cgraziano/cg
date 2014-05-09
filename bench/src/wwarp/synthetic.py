@@ -8,8 +8,8 @@ pngDir = "./png/synthetic/"
 #pngDir = None
 
 def main(args):
-  awarp1 = .3
-  tmin,tmax = .1,3
+  awarp1 = 2
+  tmin,tmax = .1,.3
   #for i in range(20):
   #  tmin = ftmin+i*.1
   estimateWaveletNoOSamp(awarp1,tmin,tmax)
@@ -19,42 +19,51 @@ def main(args):
 def estimateWaveletNoOSamp(awarp,tmin,tmax):
   na,ka = 3,0
   nh,kh = 800,-125
-  fpeak,decay = 20,0.02
+  fpeak,decay = 30,0.02
   nt,dt,ft = 2000,.002,0
   st = Sampling(nt,dt,ft)
-  rt = .2,1.2
-  ra = 1,1
-  hf,hg = makeTraces(st,rt,ra,awarp,fpeak,decay,zp=False)
+  rt = [.202]
+  ra = [1]
+  hf,hg = makeTraces(st,rt,ra,awarp,fpeak,decay,zp=True)
   plotTrace(st,hf,0,3,3,"hf")
   plotTrace(st,hg,0,3,3,"hg")
+  dt1 = .001
+  nt1 = 4000
+  ft1 = 0
+  st1 = Sampling(nt1,dt1,ft1)
+
 
   dt = st.getDelta()
   odt = 1.0/dt
   warp = Warp()
-  dww = DynamicWarpingW(warp)
-  dww.setTimeRange(int(tmin*odt),int(tmax*odt))
-  dww.setStabilityFactor(1.00)
-  halfNyq = .5*.5*odt
-  if awarp>2:
-    maxf = halfNyq*2
-  else:
-    maxf = halfNyq*awarp
+  #dww = DynamicWarpingW(warp)
+  #dww.setTimeRange(int(tmin*odt),int(tmax*odt))
+  #dww.setStabilityFactor(1.00)
+  #halfNyq = .25*odt#((1/2)*(1/(2*dt))
+  #if awarp>2:
+  #  maxf = halfNyq*2
+  #else:
+  #  maxf = halfNyq*awarp
+  #shg = warp.apply(st,awarp,hg)
+  #plotTrace(st,shg,0,3,3,"shg")
+  #dww.plotAmplitudeSpectrum(st,shg,False,"shg");
     
-  dww.setFrequencyRange(0*dt,maxf*dt)
-  a = dww.getInverseAWarpNoOSamp(na,ka,st,st,awarp,hf,hg)
-  h = dww.getWaveletH(na,ka,a,nh,kh)
-  hsyn = getArWavelet(st,fpeak,decay,nh,kh,zp=False)
-  title = "Estimated Wavelet, "+str(awarp)+\
-  " time "+str(tmin)+", "+str(tmax)
-  plotWavelets(Sampling(nh,st.getDelta(),kh*st.getDelta()),
-    [hsyn,h],title=title)
-  bdf,bbdf,bdg,bsdg,bbsdg,d = False,False,True,True,False,False
+  #dww.setFrequencyRange(0*dt,maxf*dt)
+  #a = dww.getInverseAWarpNoOSamp(na,ka,st,st,awarp,hf,hg)
+  #h = dww.getWaveletH(na,ka,a,nh,kh)
+  #hsyn = getArWavelet(st,fpeak,decay,nh,kh,zp=False)
+  #title = "Estimated Wavelet, "+str(awarp)+\
+  #" time "+str(tmin)+", "+str(tmax)
+  #plotWavelets(Sampling(nh,st.getDelta(),kh*st.getDelta()),
+  #  [hsyn,h],title=title)
+  #bdf,bbdf,bdg,bsdg,bbsdg,d = False,False,True,True,False,False
   #dww.plotDifferencePlots(bdf,bbdf,bdg,bsdg,bbsdg,d,0,3,3)
   
   bdg,bsdg = True,True
   #dww.plotDifferenceSpectrums(bdg,bsdg,0)
   #dww.plotAmplitudeSpectrum(Sampling(nh,st.getDelta(),kh*st.getDelta()),
-  #hsyn,False,"WaveletSpectrum");
+  #h,False,"h Amplitude Spectrum");
+  #dww.plotAmplitudeSpectrum(st,hg,False,"hg");
   print "a awarp = "+str(awarp)
   dump(a)
   return a
@@ -185,13 +194,14 @@ def plotTrace(st, p, tmin, tmax, amax, title):
 def plotWavelets(st,hs,hmax=None,title=None,pngDir=None):
   sp = SimplePlot()
   ls = [PointsView.Line.SOLID,PointsView.Line.DASH,PointsView.Line.DOT]
+  lw = 1,4,1
   nh = len(hs)
   hsmax = 0
   for ih in range(nh):
     if hs[ih]:
       pv = sp.addPoints(st,hs[ih])
       pv.setLineStyle(ls[ih])
-      pv.setLineWidth(2)
+      pv.setLineWidth(lw[ih])
       hsmax = max(hsmax,abs(max(hs[ih])),abs(min(hs[ih])))
   if hmax==None:
     hmax = hsmax*1.05

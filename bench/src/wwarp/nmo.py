@@ -13,10 +13,9 @@ from warp import NormalMoveout,WaveletNmo
 pngDir = None
 
 def main(args):
-  timewindow = [.5,1.75]
-  goEstimateWaveletFromGather(args[1],timewindow)
+  goEstimateWaveletFromGather(args[1])
 
-def goEstimateWaveletFromGather(name,timewindow):
+def goEstimateWaveletFromGather(name):
   """ Estimates wavelet from a gather sampled in time and offset """
   print name
   if name == "syn1": # Synthetic with one reflector
@@ -27,16 +26,6 @@ def goEstimateWaveletFromGather(name,timewindow):
     freq,decay = 20.0,0.05 # peak frequency and decay for wavelet
     fmin,fmax,sfac = 0.0,50.0,1.00
     texp,tbal = 0.00,0
-    if acceptableTimeWindow(st, timewindow) == False:
-      print "TIME WINDOWS NOT ACCEPTABLE!"
-    else:
-      print "Time Windows:"
-      ntw = len(timewindow)
-      t = 0
-      while t<ntw:
-        print str(timewindow[t]) + " " + str(timewindow[t+1])
-        t += 2
-    
     tmin,tmax,perc = 0.75,1.75,100.0
     zp = False # zero-phase?
     if zp:
@@ -66,7 +55,7 @@ def goEstimateWaveletFromGather(name,timewindow):
     tran,tbed = True,True
     nref,vnmo = 40,2.0 # number of reflectors and NMO velocity
     freq,decay = 20.0,0.05 # peak frequency and decay for wavelet
-    fmin,fmax,sfac = 0.0,50.0,1.0001
+   fmin,fmax,sfac = 0.0,50.0,1.0001
     texp,tbal = 0.00,0
     tmin,tmax,perc = 0.15,1.75,100.0
     zp = True # zero-phase?
@@ -84,9 +73,7 @@ def goEstimateWaveletFromGather(name,timewindow):
   f = tpow(texp,st,f)
   if tbal>0:
     f = balance(tbal,f)
-  #sx,st,f = timeWindowGather(sx,st,timewindow[0],timewindow[1],f)
   nt,nx = st.count,sx.count
-  print nt
   dt,dx = st.delta,sx.delta
   ft,fx = st.first,sx.first
   vnmo = fillfloat(vnmo,nt)
@@ -94,7 +81,7 @@ def goEstimateWaveletFromGather(name,timewindow):
   #nmo.setStretchMax(9.0)
   wn = WaveletNmo(nmo)
   wn.setFrequencyRange(fmin*dt,fmax*dt)
-  wn.setTimeRange(0,nt)
+  wn.setTimeRange(int(tmin/dt),int(tmax/dt))
   wn.setStabilityFactor(sfac)
   e = nmo.apply(st,sx,vnmo,f)
   apef = wn.getInverseAPef(na,ka,f)
@@ -274,39 +261,6 @@ def plotWavelets(st,hs,hmax=None,title=None):
   if title:
     sp.setTitle(title)
 
-
-def acceptableTimeWindow(st, timewindow):
-  st = Sampling(501,0.004,0.0); nt,dt,ft = st.count,st.delta,st.first
-  ntw = len(timewindow)
-  if ntw==0: 
-    print "Need time window(s)"
-    return False
-  elif ntw%2==1:
-    print "Need pair of times for time window"
-    return False
-  elif ft > timewindow[0]:
-    print "1st time point before gather starts"
-    return False
-  elif nt*dt < timewindow[ntw-1]:
-    print "last time point after gather ends"
-    return False
-  else:
-    return True
-
-def timeWindowGather(sx, st, ftimewindow, ltimewindow, f):
-  nt,dt,ft = st.count,st.delta,st.first
-  nx,dx,fx = sx.count,sx.delta,sx.first
-  iftw = st.indexOfNearest(ftimewindow)
-  iltw = st.indexOfNearest(ltimewindow)
-  ntw = iltw-iftw+1
-  ftrim = zerofloat(ntw, nx)
-  print "ntw"+str(ntw)
-  for x in range(0, nx):
-    for t in range(iftw, iltw):#last time value is exclusive
-      ftrim[x][t-iftw] = f[x][t]
-  sttrim = Sampling(ntw, dt, ftimewindow)
-  return sx, sttrim, ftrim
-
 #############################################################################
 # Do everything on Swing thread.
 
@@ -314,4 +268,3 @@ class RunMain(Runnable):
   def run(self):
     main(sys.argv)
 SwingUtilities.invokeLater(RunMain())
-

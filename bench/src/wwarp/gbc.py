@@ -5,6 +5,11 @@ from dwarp import DynamicWarpingW
 datadir = "C:/Users/Chris/Documents/CWP/Research/research/gbc/dat"
 pngDir = "./png/balancetest/"
 #pngDir = None
+#Tests of the warping with wavelets algorithm with another dataset.
+###########################Read#########################
+#The script that should be used to try warping with wavelets on your own 
+#2D data set is waveletwarpingha.py
+#######################################################
 
 def main(args):
   #Available Options: pp, ps1, ps2, shiftl, shiftc
@@ -14,7 +19,7 @@ def main(args):
   iline = 70 
   ka = 0 
   na = 50
-  kh = -125 
+  kh = 0
   nh = 251
 
   pp = getData(pp,iline)

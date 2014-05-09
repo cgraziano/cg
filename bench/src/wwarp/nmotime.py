@@ -33,7 +33,7 @@ def goEstimateWaveletFromGather(name,timewindow,funcert,luncert):
     texp,tbal = 0.00,0
     checkTimeWindow(st, timewindow)
     
-    zp = False# zero-phase?
+    zp = True# zero-phase?
     if zp:
       na,ka = 5,-2
       nh,kh = 251,-125
@@ -51,10 +51,10 @@ def goEstimateWaveletFromGather(name,timewindow,funcert,luncert):
     fmin,fmax,sfac = 0.0,50.0,1.00
     texp,tbal = 0.00,0
     checkTimeWindow(st, timewindow)
-    zp = False # zero-phase?
-    na,ka = 20,0 # sampling for inverse wavelet a
-    nh,kh = 151,-25 # sampling for wavelet h
-    hsyn = getArWavelet(freq,decay,st,nh,kh)
+    zp = True # zero-phase?
+    na,ka = 5,-2 # sampling for inverse wavelet a
+    nh,kh = 251,-125 # sampling for wavelet h
+    hsyn = getArWavelet(freq,decay,st,nh,kh,zp)
   elif name == "synt": # Synthetic with random thin beds
     st = Sampling(501,0.004,0.0); nt,dt,ft = st.count,st.delta,st.first
     sx = Sampling(201,0.010,0.0); nx,dx,fx = sx.count,sx.delta,sx.first
@@ -76,6 +76,7 @@ def goEstimateWaveletFromGather(name,timewindow,funcert,luncert):
 
   f = zerofloat(nt,nx)
   p = makeCmpReflections(vnmo,nref,st,sx,random=tran,thinBeds=tbed)
+  print "zero phase = ",zp
   f = addArWavelet(freq,decay,st,sx,p,zp)
   f = tpow(texp,st,f)
   if tbal>0:
