@@ -1,3 +1,7 @@
+#####################################################
+#Early script to test sinopec data.
+#####################################################
+
 from imports import *
 from edu.mines.jtk.dsp.Conv import *
 from wwarp import Warp, WaveletWarping

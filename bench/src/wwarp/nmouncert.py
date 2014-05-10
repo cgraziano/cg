@@ -1,5 +1,8 @@
 #############################################################################
 # Demo wavelet estimation from NMO stretch
+# This script give more or less uncertainty for different parts of
+# the synthetic data.
+#############################################################################
 
 
 from imports import *

@@ -1,3 +1,9 @@
+#######################################################
+#Tests of the warping with wavelets algorithm with dataset before tests run on
+#sinopec data. It is preferred that you used other scripts to test 
+#your own data.
+#######################################################
+
 from imports import *
 from edu.mines.jtk.dsp.Conv import *
 from dwarp import DynamicWarpingW 
@@ -5,11 +11,6 @@ from dwarp import DynamicWarpingW
 datadir = "C:/Users/Chris/Documents/CWP/Research/research/gbc/dat"
 pngDir = "./png/balancetest/"
 #pngDir = None
-#Tests of the warping with wavelets algorithm with another dataset.
-###########################Read#########################
-#The script that should be used to try warping with wavelets on your own 
-#2D data set is waveletwarpingha.py
-#######################################################
 
 def main(args):
   #Available Options: pp, ps1, ps2, shiftl, shiftc

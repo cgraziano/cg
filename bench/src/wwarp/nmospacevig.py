@@ -1,5 +1,7 @@
 #############################################################################
 # Demo wavelet estimation from NMO stretch
+#This script estimates wavelets at different CMP gathers in Viking Graben data.
+#############################################################################
 
 
 from imports import *

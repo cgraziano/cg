@@ -1,9 +1,5 @@
 #############################################################################
-# Demo wavelet estimation from warping.
-# This version minimizes || f - HSLAg ||, using iterative alternating
-# updates to H and A, where HA need not equal the identity operator I.
-# (1) find h such that f ~ SLAg * h (where h is a shaping filter)
-# (2) find a such that f ~ HSLGa (solving non-Toeplitz system)
+#Builds PP and PS figures for CWP presentation.
 
 from imports import *
 

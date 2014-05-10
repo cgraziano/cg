@@ -1,7 +1,8 @@
 #############################################################################
 # Demo wavelet estimation from NMO stretch
-
-
+# This script estimates multiple wavelets at different times for one defined CMP 
+# gather in Viking Graben data. 
+#############################################################################
 from imports import *
 
 from edu.mines.jtk.dsp.Conv import *

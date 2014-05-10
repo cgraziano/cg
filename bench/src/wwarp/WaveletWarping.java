@@ -362,8 +362,18 @@ public class WaveletWarping {
   public float[][] applyL(float[][] u, float[][] f) {
     return aaf(RMAX,u,f);
   }
+  /**
+   * Applies the low-pass anti-alias filter L.
+   * If the specified warping includes squeezing, then this method attenuates
+   * high frequencies that could be aliased during warping.
+   * @param rmax the highest squeeze amount to define what frequencies the 
+   *             anti-aliasing filter will be applied to.
+   * @param u array of warping times u(t).
+   * @param f array with input sequence f(t).
+   * @return array with filtered output sequence.
+   */
   public float[] applyLVariableS(float rmax, float[] u, float[] f) {
-    return aafVariable(rmax,u,f);
+    return aaf(rmax,u,f);
   }
 
   /**
@@ -379,7 +389,15 @@ public class WaveletWarping {
   public float[][] applyS(float[][] u, float[][] f) {
     return warp(u,f);
   }
-  public float[] applyShift(float[] u, float[] f) {
+  /**
+   * Applies the warping operator S. This operator S
+   * only represents shifting.
+   * Does not apply an anti-alias low-pass filter.
+   * @param u array of warping times u(t).
+   * @param f array with input sequence f(t).
+   * @return array with warped output sequence.
+   */  
+   public float[] applyShift(float[] u, float[] f) {
     return shift(u,f);
   }
 
@@ -457,7 +475,14 @@ public class WaveletWarping {
   /**
    * Tool for debugging.
    * Returns the array of undelayed differences D = B(SG-F)
-   * where S represents a static shift
+   * where the S operator represents a shift.
+   * @param na number of samples in the inverse wavelet a.
+   * @param ka the sample index for a[0].
+   * @param u array[nt] of shifting times u(t).
+   * @param f array[nt] with input sequence.
+   * @param g array[nt] with sequence to be warped.
+   * @param undelay If true, d0,d1,d2 are not delayed by one sample,
+                    if false, these sequences are delayed by one sample.
   */
   public float[][] displayDifferencesShifts(
     int na, int ka, float[] u, float[] f, float[] g, boolean undelay)
@@ -477,6 +502,12 @@ public class WaveletWarping {
     return d;
   }
 
+  /**
+   * Returns the rms value of the image.
+   */
+  public float rms(float[][] x) {
+    return (float)sqrt(dot(x,x)/x.length/x[0].length);
+  }
   /**
    * Returns the rms value of the image specified between 
    * the two time indices.
@@ -525,7 +556,7 @@ public class WaveletWarping {
   }
   /**
    * Returns the array of differences D = B(SG-F)
-   * where S represents a static shift
+   * where the S operator represents a shift.
   */
   private float[][] computeDifferencesShifts(
     int na, int ka, float[] u, float[] f, float[] g)
@@ -542,6 +573,10 @@ public class WaveletWarping {
     }
     return d;
   }
+  /**
+   * Returns the array of differences D = B(SG-F)
+   * where the S operator represents a time varying warp.
+  */
   private float[][] computeDifferencesVariable(
     int na, int ka, float[] u, float rmax, float[] f, float[] g)
   {
@@ -572,7 +607,7 @@ public class WaveletWarping {
     }
     return d;
   }
-
+  
   private double dot(float[] x, float[] y) {
     int nt = x.length;
     int itlo = (_itmin<_itmax)?_itmin:0;
@@ -589,6 +624,39 @@ public class WaveletWarping {
       sum += dot(x[i],y[i]);
     return sum;
   }
+  private double dot(int itmin, int itmax, float[] x, float[] y) {
+    int nt = x.length;
+    int itlo = itmin;
+    int ithi = itmax; 
+    double sum = 0.0;
+    for (int it=itlo; it<=ithi; ++it) 
+      sum += x[it]*y[it];
+    return sum;
+  }
+  private double dot(int itmin, int itmax, float[][] x, float[][] y) {
+    int n = x.length;
+    double sum = 0.0;
+    for (int i=0; i<n; ++i) 
+      sum += dot(itmin,itmax,x[i],y[i]);
+    return sum;
+  }
+  private double dotPS(float[] x, float[] y) {
+    int nt = x.length;
+    int itlo = 228;//(_itmin>0)?_itmin:0;
+    int ithi = 700;//(_itmax>0)?_itmax:nt-1;
+    double sum = 0.0;
+    for (int it=itlo; it<=ithi; ++it) 
+      sum += x[it]*y[it];
+    return sum;
+  }
+  private double dotPS(float[][] x, float[][] y) {
+    int n = x.length;
+    double sum = 0.0;
+    for (int i=0; i<n; ++i) 
+      sum += dotPS(x[i],y[i]);
+    return sum;
+  }
+
 
   /**
    * Returns the largest squeezing r(t) = u'(t) not greater than rmax.
@@ -626,8 +694,8 @@ public class WaveletWarping {
    */
   private float[] aaf(float rmax, float[] u, float[] x) {
     int nt = u.length;
-    float r = squeezing(RMAX,u);
-    System.out.println("rvariable = "+r);
+    float r = squeezing(rmax,u);
+    System.out.println("r = "+r);
     if (r>1.0) {
       float[] y = new float[nt];
       BandPassFilter aaf = new BandPassFilter(0.0,0.5/r,0.10/r,0.01);
@@ -638,7 +706,7 @@ public class WaveletWarping {
     }
   }
   private float[][] aaf(float rmax, float[][] u, float[][] x) {
-    float r = squeezing(RMAX,u);
+    float r = squeezing(rmax,u);
     System.out.println("r="+r);
     if (r>1.0) {
       int nx = x.length;
@@ -647,19 +715,6 @@ public class WaveletWarping {
       BandPassFilter aaf = new BandPassFilter(0.0,0.5/r,0.10/r,0.01);
       for (int ix=0; ix<nx; ++ix)
         aaf.apply(x[ix],y[ix]);
-      return y;
-    } else {
-      return copy(x);
-    }
-  }
-  private float[] aafVariable(float rmax, float[] u, float[] x) {
-    int nt = u.length;
-    float r = squeezing(rmax,u);
-    System.out.println("rvariable = "+r);
-    if (r>1.0) {
-      float[] y = new float[nt];
-      BandPassFilter aaf = new BandPassFilter(0.0,0.5/r,0.10/r,0.01);
-      aaf.apply(x,y);
       return y;
     } else {
       return copy(x);

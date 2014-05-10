@@ -1,9 +1,6 @@
 #############################################################################
 # Demo wavelet estimation from warping.
-# This version minimizes || f - HSLAg ||, using iterative alternating
-# updates to H and A, where HA need not equal the identity operator I.
-# (1) find h such that f ~ SLAg * h (where h is a shaping filter)
-# (2) find a such that f ~ HSLGa (solving non-Toeplitz system)
+# Test if you can find wavelet with constant warping.
 
 from imports import *
 
@@ -28,53 +25,95 @@ def goSimpleTest():
   nh,kh = 181,-90 # sampling for wavelet H
   dt,ft = 0.004,0.000 # used for plotting only
   tmin,tmax = 0,nt-1
-  sfac = 1.00
-  wha = 10.0 
+  sfac = 1.0000001
+  wha = 0.0 
   st = Sampling(nt,dt,ft)
   for mp in [False]: # True, for minimum-phase; False for other
     hk = getWavelet(freq,decay,nh,kh,mp) # known wavelet
-    for shift in [100]: # for stretch and squeeze, ...
-      aw = zerofloat(na); aw[-ka] = 1.0
-      hw = zerofloat(nh); hw[-kh] = 1.0
-      p,q = makeImpulsesShift(shift,nt,ni)
+    for r in [2.0]: # 0.5 for stretch; 2.0 for squeeze
+      p,q = makeImpulses(r,nt,ni)
       f = addWavelet(freq,decay,p,mp)
       g = addWavelet(freq,decay,q,mp)
-      u = rampfloat(0.0,1,nt)
-      u = add(u,shift)
+      u = rampfloat(0.0,r,nt)
+      if r<=1.0:
+        u = add((1.0-r)*(nt-1),u)
       ww = WaveletWarpingHA()
       ww.setTimeRange(tmin,tmax)
       ww.setStabilityFactor(sfac)
       ww.setWeightHA(wha)
       ak = ww.getWaveletH(nh,kh,hk,na,ka) # known inverse wavelet
-      for iter in range(5):
-        print "aw:"
-        dump(aw)
-        hw = ww.getWaveletHShifts(nh,kh,na,ka,aw,u,f,g) # estimated wavelet
-        print "hw:"
-        dump(hw)
-        hsag = ww.applyHSA(na,ka,aw,nh,kh,hw,u,g) # PS warping wavelets
-        ew = ww.rms(sub(f,hsag))
-        print "ew",ew
 
-      p = ww.displayPShifts(na,ka,nh,kh,hw,u,g)
-      for i in range(0,na):
-        SimplePlot.asPoints(p[i])
+      hw = zerofloat(nh); hw[-kh] = 1.0
+      aw = zerofloat(na); aw[-ka] = 1.0
+      naw = normalizeMax(aw)
+      hw = ww.getWaveletH(nh,kh,na,ka,aw,u,f,g) # estimated wavelet
+
       sg = ww.applyS(u,g)
       ag = ww.applyA(na,ka,aw,g)
       af = ww.applyA(na,ka,aw,f)
-      sag = ww.applyS(u,ag)
-      hsag = ww.applyH(nh,kh,hw,sag)
+      lag = ww.applyL(u,ag) # lowpass, if squeezing
+      slag = ww.applyS(u,lag)
+      hslag = ww.applyH(nh,kh,hw,slag)
       normalizeMax(hw)
       normalizeMax(hk)
-      title = "shift = "+str(shift)
-      plotSequences(st,[g,sg],labels=["g","Sg"],title=title)
+      title = "iter = pre r = "+str(r)
       plotSequences(st,[f,g],labels=["f","g"],title=title)
       plotSequences(st,[f,sg],labels=["f","Sg"],title=title)
       plotSequences(st,[af,ag],labels=["Af","Ag"],title=title)
-      plotSequences(st,[af,sag],labels=["Af","SAg"],title=title)
-      plotSequences(st,[f,hsag],labels=["f","HSAg"],title=title)
+      plotSequences(st,[af,lag],labels=["Af","LAg"],title=title)
+      plotSequences(st,[af,slag],labels=["Af","SLAg"],title=title)
+      plotSequences(st,[f,hslag],labels=["f","HSLAg"],title=title)
       plotWavelets(Sampling(nh,dt,kh*dt),[hw,hk],title=title)
 
+      niter = 300 
+      for iter in range(niter):
+        print iter
+        aw = ww.getInverseA(na,ka,nh,kh,hw,u,f,g) # estimated inverse
+        print "aw:"
+        dump(aw)
+        hw = ww.getWaveletH(nh,kh,na,ka,aw,u,f,g) # estimated wavelet
+        print "hw:"
+        dump(hw)
+        #hslag = ww.applyHSLA(na,ka,aw,nh,kh,hw,u,g) # PS warping wavelets
+        #ew = ww.rms(sub(f,hslag))
+        #print "ew",ew
+        
+        if iter%50==0:
+          sg = ww.applyS(u,g)
+          ag = ww.applyA(na,ka,aw,g)
+          af = ww.applyA(na,ka,aw,f)
+          lag = ww.applyL(u,ag) # lowpass, if squeezing
+          slag = ww.applyS(u,lag)
+          hslag = ww.applyH(nh,kh,hw,slag)
+          title = "iter = "+str(iter)+" r = "+str(r)
+          #plotSequences(st,[f,g],labels=["f","g"],title=title)
+          #plotSequences(st,[f,sg],labels=["f","Sg"],title=title)
+          #plotSequences(st,[af,ag],labels=["Af","Ag"],title=title)
+          #plotSequences(st,[af,lag],labels=["Af","LAg"],title=title)
+          #plotSequences(st,[af,slag],labels=["Af","SLAg"],title=title)
+          #plotSequences(st,[f,hslag],labels=["f","HSLAg"],title=title)
+          #normalizeMax(aw)
+          SimplePlot.asPoints(aw)
+          normalizeMax(hw)
+          normalizeMax(hk)
+          #plotWavelets(Sampling(nh,dt,kh*dt),[hw,hk],title=title+str(iter))
+      sg = ww.applyS(u,g)
+      ag = ww.applyA(na,ka,aw,g)
+      af = ww.applyA(na,ka,aw,f)
+      lag = ww.applyL(u,ag) # lowpass, if squeezing
+      slag = ww.applyS(u,lag)
+      hslag = ww.applyH(nh,kh,hw,slag)
+      title = "iter = "+str(iter)+" r = "+str(r)
+      plotSequences(st,[f,g],labels=["f","g"],title=title)
+      plotSequences(st,[f,sg],labels=["f","Sg"],title=title)
+      plotSequences(st,[af,ag],labels=["Af","Ag"],title=title)
+      plotSequences(st,[af,lag],labels=["Af","LAg"],title=title)
+      plotSequences(st,[af,slag],labels=["Af","SLAg"],title=title)
+      plotSequences(st,[f,hslag],labels=["f","HSLAg"],title=title)
+      normalizeMax(hw)
+      normalizeMax(hk)
+      plotWavelets(Sampling(nh,dt,kh*dt),[hw,hk],title=title+str(iter))
+      
 def getSinoImages():
   dataDir = "/Users/Chris/data/sinos/"
   n1f,n1g,d1,f1 = 501,852,0.004,0.0
@@ -133,26 +172,6 @@ def makeImpulses(r,nt,ni):
 
     si.accumulate(tp,rjp,nt,1.0,0.0,p)
     si.accumulate(tq,rjq,nt,1.0,0.0,q)
-  return p,q
-
-def makeImpulsesShift(shift,nt,ni):
-  p = zerofloat(nt)
-  q = zerofloat(nt)
-  itmax = nt-1
-  if shift>0:
-    ts = rampfloat((itmax-shift)/(ni+1),(itmax-shift)/(ni+1),ni)
-  else:
-    ts = rampfloat((itmax-((itmax+shift)/(ni+1)/ni))-((itmax+shift)/(ni+1)),(itmax+shift)/(ni+1),ni)
-  si = SincInterp.fromErrorAndFrequency(0.01,0.45)
-  rj = -1.0
-  for ji in range(ni):
-    tj = ts[ji]
-    tp = ts[ji]
-    tq = tp+shift
-    #print "tp =",tp," tq =",tq
-    rj = -rj
-    si.accumulate(tp,rj,nt,1.0,0.0,p)
-    si.accumulate(tq,rj,nt,1.0,0.0,q)
   return p,q
 
 def addWavelet(fpeak,decay,p,mp=False):

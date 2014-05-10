@@ -518,6 +518,32 @@ public class WaveletWarpingHA {
     }
     return p;
   }
+  /**
+   * Returns the rms value of the image/trace.
+   */
+  public float rms(float[] x) {
+    return (float)sqrt(dot(x,x)/x.length);
+  }
+  public float rms(float[][] x) {
+    return (float)sqrt(dot(x,x)/x.length/x[0].length);
+  }
+  /**
+   * Returns the rms value of the image specified between 
+   * the two time indices.
+   */
+  public float rms(int itmin, int itmax, float[][] x) {
+    int nt = itmax-itmin+1;
+    return (float)sqrt(dot(itmin,itmax,x,x)/x.length/nt);
+  }
+  /**
+   * Returns the rms value of the PS image specified between 
+   * the two time indices 228 and 700.
+   */
+  public float rmsPS(float[][] x) {
+    int nt = 700-228+1;
+    return (float)sqrt(dotPS(x,x)/x.length/nt);
+  }
+
 
   ///////////////////////////////////////////////////////////////////////////
   // private
@@ -704,23 +730,7 @@ public class WaveletWarpingHA {
     return y;
   }
 
-  /**
-   * Returns the rms value of the image specified between 
-   * the two time indices.
-   */
-  public float rms(int itmin, int itmax, float[][] x) {
-    int nt = itmax-itmin+1;
-    return (float)sqrt(dot(itmin,itmax,x,x)/x.length/nt);
-  }
-  /**
-   * Returns the rms value of the PS image specified between 
-   * the two time indices 228 and 700.
-   */
-  public float rmsPS(float[][] x) {
-    int nt = 700-228+1;
-    return (float)sqrt(dotPS(x,x)/x.length/nt);
-  }
-
+  
   private static void trace(String s) {
     System.out.println(s);
   }

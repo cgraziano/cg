@@ -1,5 +1,5 @@
 #############################################################################
-# Demo wavelet estimation from warping.
+#builds synthetic figures for CWP presentation
 
 from imports import *
 

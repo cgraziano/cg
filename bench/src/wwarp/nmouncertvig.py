@@ -1,5 +1,9 @@
 #############################################################################
 # Demo wavelet estimation from NMO stretch
+# This script give more or less uncertainty for different parts of
+# the Viking Graben data.
+#############################################################################
+
 
 
 from imports import *
