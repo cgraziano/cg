@@ -26,46 +26,43 @@ def goSino():
   nh,kh = 81,-40 # sampling for wavelet H in PP image
   nt,dt,ft = 501,0.004,0.000 # used for plotting only
   nx,dx,fx = 721,0.015,0.000
-  sa = Sampling(na,dt,ka*dt)
-  sh = Sampling(nh,dt,kh*dt)
-  st = Sampling(nt,dt,ft)
+  sa = Sampling(na,dt,ka*dt) # sampling of the inverse wavelet in the PS image
+  sh = Sampling(nh,dt,kh*dt) # sampling of the wavelet in the PP image
+  st = Sampling(nt,dt,ft)  # sampling of the PP image
   ntg = 852
-  stg = Sampling(ntg,dt,ft)
-  sx = Sampling(nx,dx,fx)
+  stg = Sampling(ntg,dt,ft) # sampling of the PS image
+  sx = Sampling(nx,dx,fx) # spatial sampling for both the PP and PS images
   itmin,itmax = 100,400 # PP time window
   sfac = 1.000 # stabilization factor
   wha = 0.000 # weight for HA = I terms
   f,g,u = getSinoImages() # PP image, PS image, and warping u(t,x)
 
-  #ntwin = itmax-itmin+1
+  
   ntwin = nt
   uprime = zerofloat(ntwin,nx)
   for ix in range(0,nx):
     for it in range(1,ntwin):
-      #uprime[ix][it] = u[ix][itmin+it]-u[ix][itmin+it-1]
       uprime[ix][it] = u[ix][it]-u[ix][it-1]
   sp = SimplePlot(SimplePlot.Origin.UPPER_LEFT)
   pv = sp.addPixels(uprime)
   pv.setClips(1.4,1.72)
   sp.addColorBar()
 
-  plotAmplitudeSpectrumT(st, f[300], 100, 400, "f amp", amax=None)
+  plotAmplitudeSpectrumT(st, f[300], 100, 400, "f amp", amax=None)#Amplitude spectrum single trace
   plotAmplitudeSpectrumT(stg, g[300], 228, 700, "g amp", amax=None)
+
   ww = WaveletWarpingHA()
-  ww.setTimeRange(itmin,itmax)
-  ww.setStabilityFactor(sfac)
+  ww.setTimeRange(itmin,itmax)# Identify the time range that is used for wavelet estimation.
+  ww.setStabilityFactor(sfac)# Stability factor if matrix is not positive definite. (unsure if 
+  #best solution)
   slg = ww.applyS(u,ww.applyL(u,g)) # PS warping without wavelets
-  #plotImage(st,sx,f,zoom=True,png="pp"+"zoom")
-  #plotImage(st,sx,slg,zoom=True,png="psw1"+"zoom")
-  #plotImage(st,sx,f,zoom=False,png="pp"+"nozoom")
-  #plotImage(st,sx,slg,zoom=False,png="psw1"+"nozoom")
   plotImageTime(st,sx,f,vlabel="PP time (s)",itmin=100,itmax=400,title="PPsamples",pngDir=pngDir,\
   halfcol=False,onecol=True,twocol=False)
   plotImageTime(stg,sx,g,vlabel="PS time (s)",itmin=228,itmax=700,title="PSsamples",\
   pngDir=pngDir,halfcol=False,onecol=True,twocol=False)
   e1 = ww.rms(sub(f,slg))
   for niter in [0,11]:
-    for wha in [0]:
+    for wha in [0]:#wha controls the influence of making h and a inverses of one another.
       print "niter =",niter," wha =",wha
       suffix = str(niter)+str(int(wha))
       ww.setWeightHA(wha)
@@ -81,6 +78,7 @@ def goSino():
       dump(ag)
       print "hf:"
       dump(hf)
+      #main iteration loop and what is needed to get estimate fo wavelets.
       for jiter in range(niter):
         print "iteration",jiter
         ag = ww.getInverseA(na,ka,nh,kh,hf,u,f,g) # inverse a in g
@@ -98,24 +96,6 @@ def goSino():
         title = "wavelets"+str(jiter)+" ew = "+str(ew)
         plotWaveletsPpPs(sh,hf,hg,title=title,pngDir=pngDir,\
         halfcol=True,onecol=False,twocol=False)
-        #plotImage(st,sx,hslag,zoom=True,png="psww"+suffix)
-      """
-      hf = zerofloat(nh); hf[-nh] = 1.0 # initial inverse a in g
-      ag = ww.getInverseA(na,ka,nh,kh,hf,u,f,g) # wavelet h in f
-      for jiter in range(niter):
-        print "iteration",jiter
-        hf = ww.getWaveletH(nh,kh,na,ka,ag,u,f,g) # wavelet h in f
-        ag = ww.getInverseA(na,ka,nh,kh,hf,u,f,g) # inverse a in g
-
-        hslag = ww.applyHSLA(na,ka,ag,nh,kh,hf,u,g) # PS warping wavelets
-        ew = ww.rms(sub(f,hslag))
-        print "ew",ew
-        hg = ww.getWaveletH(na,ka,ag,nh,kh) # wavelet in g
-        title = "wavelets"+str(jiter)+" ew = "+str(ew)
-        plotWaveletsPpPs(sh,hf,hg,title=title,pngDir=pngDir,\
-        onecol=True,twocol=False)
-        #plotImage(st,sx,hslag,zoom=True,png="psww"+suffix)
-      """
       
       aG = ww.applyA(na,ka,ag,g)
       plotImage(stg,sx,aG,zoom=False,png="Ag"+suffix)
@@ -187,7 +167,7 @@ def goSino():
   title=title, pngDir=pngDir, onecol=None, twocol=True)
 
   
-
+#synthetic tests of iterative wavelet estimation.
 def goSimpleTest():
   nt,ni = 481,10 # number of time samples; number of impulses
   freq,decay = 0.08,0.05 # peak frequency and decay for wavelet

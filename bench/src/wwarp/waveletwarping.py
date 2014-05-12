@@ -51,6 +51,8 @@ def goSimpleTest():
       u = rampfloat(0.0,r,nt)
       if r<=1.0:
         u = add((1.0-r)*(nt-1),u)
+      
+      #main piece of wavelet estimation code
       ww = WaveletWarping()
       ww.setFrequencyRange(fmin,fmax)
       ww.setTimeRange(tmin,tmax)
@@ -64,6 +66,7 @@ def goSimpleTest():
       aw = ww.getInverseA(na,ka,u,f,g) # estimated inverse wavelet
       SimplePlot.asPoints(aw)
       hw = ww.getWaveletH(na,ka,aw,nh,kh) # estimated wavelet
+
       #dump(ak)
       dump(aw)
       dump(hw)
