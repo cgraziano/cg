@@ -18,6 +18,7 @@ def main(args):
   goSino()
 
 def goSino():
+  ####Sampling parameters
   na,ka = 81,-40 # sampling for inverse A of wavelet in PS image
   nh,kh = 81,-40 # sampling for wavelet H in PP image
   nt,dt,ft = 501,0.004,0.000 # used for plotting only
@@ -31,7 +32,11 @@ def goSino():
   itmin,itmax = 100,400 # PP time window
   sfac = 1.000 # stabilization factor
   wha = 0.000 # weight for HA = I terms
+  ####
 
+  ####Plotting of initial images
+  ## f represents the pp image, g represents the ps image, and ts represents the pre-calculated
+  #time shifts from DTW. 
   rawf,rawg,ts = getSinoImagesRaw()
   f,g,u = getSinoImages() # PP image, PS image, and warping u(t,x)
   title = "rawPP"
@@ -55,7 +60,9 @@ def goSino():
   title="fzoom"
   plotImageTimeWhole(st,sx,f,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=150,
   title=title,pngDir=pngDir,twocol=True)
+  ####
 
+  ####The amount of squeezing applied to the PS image.  
   ntwin = nt
   uprime = zerofloat(ntwin,nx)
   for ix in range(0,nx):
@@ -65,11 +72,14 @@ def goSino():
   title = "uprime"
   plotImageTimeU(st,sx,uprime,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=itmax,
   title=title,pngDir=pngDir,twocol=True)
-
+  ####
+  
+  ####This is the warping with wavelets section.
   ww = WaveletWarpingHA()
   ww.setTimeRange(itmin,itmax)
   ww.setStabilityFactor(sfac)
   slg = ww.applyS(u,ww.applyL(u,g)) # PS warping without wavelets
+  ### Initialize and calculate rms of images.
   ews = zerofloat(12)
   ewshas = zerofloat(12)
   ewdeeps = zerofloat(12)
@@ -81,21 +91,25 @@ def goSino():
   ewdeeps[0] = e1deep
   print "e1",e1
   print "e1sha",e1sha
-  sews = Sampling(12,1.0,0.0)
+  ###
+  ###Iterating with warping with wavelets
   for niter in [0,11]:
-    for wha in [0]:
+    for wha in [0]:#wha=0  means no weight is applied to HA=I
       print "niter =",niter," wha =",wha
       suffix = str(niter)+str(int(wha))
+
       ww.setWeightHA(wha)
       ag = zerofloat(na); ag[-ka] = 1.0 # initial inverse a in g
       hf = ww.getWaveletH(nh,kh,na,ka,ag,u,f,g) # wavelet h in f
       hslag = ww.applyHSLA(na,ka,ag,nh,kh,hf,u,g) # PS warping wavelets
+
       ew = ww.rms(itmin,itmax,sub(f,hslag))
       print "ew",ew
       print "ag:"
       dump(ag)
       print "hf:"
       dump(hf)
+
       for jiter in range(niter):
         print "iteration",jiter
         ag = ww.getInverseA(na,ka,nh,kh,hf,u,f,g) # inverse a in g
@@ -107,6 +121,7 @@ def goSino():
         dump(hf)
 
         hslag = ww.applyHSLA(na,ka,ag,nh,kh,hf,u,g) # PS warping wavelets
+        ### Calculate rms of images.
         ew = ww.rms(itmin,itmax,sub(f,hslag))
         ews[jiter+1] = ew
         ewsha = ww.rms(itmin,150,sub(f,hslag))
@@ -117,10 +132,11 @@ def goSino():
         print "ewsha",ewsha
         print "ewdeep",ewdeep
         hg = ww.getWaveletH(na,ka,ag,nh,kh) # wavelet in g
+        ###
 
-      aG = ww.applyA(na,ka,ag,g)
+      aG = ww.applyA(na,ka,ag,g) #Apply inverse a to g
       hg = ww.getWaveletH(na,ka,ag,nh,kh) # wavelet in g
-      sg = ww.applyS(u,ww.applyL(u,g))
+      sg = ww.applyS(u,ww.applyL(u,g)) # simply squeezing g
       hslag = ww.applyHSLA(na,ka,ag,nh,kh,hf,u,g) # PS warping with wavelets
 
       ew = ww.rms(itmin,itmax,sub(f,hslag))
@@ -140,7 +156,6 @@ def goSino():
 
       print "###niter",niter
       if niter==0:
-        print "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         ixmin=int(0/dx)
         ixmax=int(10.8/dx)
         hslg0 = ww.applyHSLA(na,ka,ag,nh,kh,hf,u,g) # PS warping with wavelets
@@ -212,6 +227,8 @@ def goSino():
           dnews11[i] = news11[i] - news11[0] 
           dnewshas11[i] = newshas11[i] - newshas11[0] 
           dnewdeeps11[i] =  newdeeps11[i] - newdeeps11[0] 
+ ###
+ ####
 
 
 

@@ -669,14 +669,14 @@ public class WaveletWarping {
     float r = 0.0f;
     for (int it=itlo; it<=ithi; ++it) {
       float du = u[it]-u[it-1];
-      System.out.println("u - unm1 "+u[it]+" minus "+u[it-1]+" du = "+du);
+      //System.out.println("u - unm1 "+u[it]+" minus "+u[it-1]+" du = "+du);
       if (r<du){
         r = du;
-        System.out.println("rtemp = "+r);
+        //System.out.println("rtemp = "+r);
       }
     }
-    System.out.println("r = "+r);
-    System.out.println("rmax = "+rmax);
+    //System.out.println("r = "+r);
+    //System.out.println("rmax = "+rmax);
     return min(r,rmax);
   }
   private float squeezing(float rmax, float[][] u) {
@@ -695,7 +695,7 @@ public class WaveletWarping {
   private float[] aaf(float rmax, float[] u, float[] x) {
     int nt = u.length;
     float r = squeezing(rmax,u);
-    System.out.println("r = "+r);
+    //System.out.println("r = "+r);
     if (r>1.0) {
       float[] y = new float[nt];
       BandPassFilter aaf = new BandPassFilter(0.0,0.5/r,0.10/r,0.01);
@@ -707,7 +707,7 @@ public class WaveletWarping {
   }
   private float[][] aaf(float rmax, float[][] u, float[][] x) {
     float r = squeezing(rmax,u);
-    System.out.println("r="+r);
+    //System.out.println("r="+r);
     if (r>1.0) {
       int nx = x.length;
       int nt = x[0].length;

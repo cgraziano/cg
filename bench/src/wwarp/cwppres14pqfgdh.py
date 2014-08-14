@@ -12,8 +12,8 @@ from java.util import Random
 
 #pngDir = "./pres14/figures/"
 #pngDir = "./png/figuresAbs/"
-pngDir = "./pres14/pqfgdh/"
-#pngDir = None
+#pngDir = "./pres14/pqfgdh/"
+pngDir = None
 
 def main(args):
   goSimpleTest()
@@ -118,13 +118,13 @@ def goSimpleTest():
       title=title,pngDir=pngDir,twocol=True)
 
  
-      title="hwaveletsfg"
+      title="h_wavelets_fg"
       plotWavelets(Sampling(nh,dt,kh*dt),[nhw,nhk],0.90,0.80,16.0/9.0,title=title,pngDir=pngDir,
       twocol=True)
-      title="awaveletsfg"
+      title="a_wavelets_fg"
       plotWavelets(Sampling(na,dt,ka*dt),[naw,nak],0.90,0.80,16.0/9.0,title=title,pngDir=pngDir,
       twocol=True)
-      title="hKnownwaveletsfg"
+      title="h_Knownwavelets_fg"
       plotWavelet(Sampling(nh,dt,kh*dt),nhk,0.90,0.70,16.0/9.0,title=title,pngDir=pngDir,
       twocol=True)
 
@@ -160,14 +160,14 @@ def makeImpulses(r,nt,ni):
 
 def addWavelet(fpeak,decay,p,mp=False):
   w = 2.0*PI*fpeak
-  print "w = "+str(w)
+  #print "w = "+str(w)
   if not mp:
     decay *= 2.0
     print "decay = "+str(decay)
     w -= 2.0*PI*0.04
-    print "w= "+str(w)
+    #print "w= "+str(w)
   r = exp(-decay)
-  print "r= "+str(r)
+  #print "r= "+str(r)
   a1,a2 = -2.0*r*cos(w),r*r
   print "a =",[1,a1,a2]
   poles = [Cdouble.polar(r,w),Cdouble.polar(r,-w)]
