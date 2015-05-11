@@ -1,134 +1,162 @@
 #############################################################################
-# Demo wavelet estimation from warping.
-# Test if you can find wavelet with constant warping.
+#Builds PP and PS figures for CWP presentation.
 
 from imports import *
 
 from edu.mines.jtk.dsp.Conv import *
-from wwarp import WaveletWarpingHA
+from wwarp import WaveletWarpingAfAgEig
 
 #############################################################################
-
+#pngdir is the location the images will be sent to.
 #pngDir = "./png/figures/"
-pngDir = "./png/figuresAbs/"
+#pngDir = "./png/figuresAbs/"
+#pngDir = "./pres14/PPPSSTiShAH/"
+#pngDir = "./pres14/PPPSSTiShAH/poster/"
 #pngDir = "./png/200iterationsh1/"
-#pngDir = None
+pngDir = None
 
 def main(args):
-  goSimpleTest()
+  goSino()
 
-def goSimpleTest():
-  nt,ni = 481,2 # number of time samples; number of impulses
-  freq,decay = 0.08,0.05 # peak frequency and decay for wavelet
-  #na,ka = 11,-5 # sampling for inverse wavelet A
-  na,ka = 81,-20 # sampling for inverse wavelet A
-  nh,kh = 181,-90 # sampling for wavelet H
-  dt,ft = 0.004,0.000 # used for plotting only
-  tmin,tmax = 0,nt-1
-  sfac = 1.0000001
-  wha = 0.0 
+def goSino():
+  ####Sampling parameters
+  naf,kaf = 20,-10 # sampling for inverse A of wavelet in PS image
+  nag,kag = 20,-10 # sampling for inverse A of wavelet in PS image
+  nhf,khf = 81,-40 # sampling for wavelet H in PP image
+  nhg,khg = 81,-40 # sampling for wavelet H in PP image
+  nt,dt,ft = 2000,0.002,0.000 # used for plotting only
+  nx,dx,fx = 145,0.033529,0.000
+  saf = Sampling(naf,dt,kaf*dt)
+  sag = Sampling(nag,dt,kag*dt)
+  shf = Sampling(nhf,dt,khf*dt)
+  shg = Sampling(nhg,dt,khg*dt)
   st = Sampling(nt,dt,ft)
-  for mp in [False]: # True, for minimum-phase; False for other
-    hk = getWavelet(freq,decay,nh,kh,mp) # known wavelet
-    for r in [2.0]: # 0.5 for stretch; 2.0 for squeeze
-      p,q = makeImpulses(r,nt,ni)
-      f = addWavelet(freq,decay,p,mp)
-      g = addWavelet(freq,decay,q,mp)
-      u = rampfloat(0.0,r,nt)
-      if r<=1.0:
-        u = add((1.0-r)*(nt-1),u)
-      ww = WaveletWarpingHA()
-      ww.setTimeRange(tmin,tmax)
-      ww.setStabilityFactor(sfac)
-      ww.setWeightHA(wha)
-      ak = ww.getWaveletH(nh,kh,hk,na,ka) # known inverse wavelet
+  sx = Sampling(nx,dx,fx)
+  itmin,itmax = 0,2000 # PP time window
+  sfac = 1.000 # stabilization factor
+  wha = 0.000 # weight for HA = I terms
+  ####
 
-      hw = zerofloat(nh); hw[-kh] = 1.0
-      aw = zerofloat(na); aw[-ka] = 1.0
-      naw = normalizeMax(aw)
-      hw = ww.getWaveletH(nh,kh,na,ka,aw,u,f,g) # estimated wavelet
+  ####Plotting of initial images
+  ## f represents the pp image, g represents the ps image, and ts represents the pre-calculated
+  #time shifts from DTW. 
+  rawf,rawg,ts = getGBCImagesRaw()
+  f,g,u = getGBCImages() # PP image, PS image, and warping u(t,x)
+  title = "rawPP"
+  plotImageTimeHalf(st,sx,rawf,"PP time (s)",0.45,0.8,16.0/9.0,itmin=itmin,
+  itmax=itmin,title=title,pngDir=pngDir,twocol=True)
+  title = "rawPS"
+  plotImageTimeHalf(st,sx,rawg,"PS time (s)",0.45,0.8,16.0/9.0,itmin=itmin,
+  itmax=itmax,title=title,pngDir=pngDir,twocol=True)
+  title = "PP"
+  plotImageTimeHalf(st,sx,f,"PP time (s)",0.45,0.8,16.0/9.0,itmin=itmin,
+  itmax=itmax,title=title,pngDir=pngDir,twocol=True)
+  title = "PS"
+  plotImageTimeHalf(st,sx,g,"PS time (s)",0.45,0.8,16.0/9.0,itmin=itmin,
+  itmax=itmax,title=title,pngDir=pngDir,twocol=True)
+  title="g"
+  plotImageTimeWhole(st,sx,g,"PS time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=itmax,
+  title=title,pngDir=pngDir,twocol=True)
+  title="f"
+  plotImageTimeWhole(st,sx,f,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=itmax,
+  title=title,pngDir=pngDir,twocol=True)
+  ####
 
-      sg = ww.applyS(u,g)
-      ag = ww.applyA(na,ka,aw,g)
-      af = ww.applyA(na,ka,aw,f)
-      lag = ww.applyL(u,ag) # lowpass, if squeezing
-      slag = ww.applyS(u,lag)
-      hslag = ww.applyH(nh,kh,hw,slag)
-      normalizeMax(hw)
-      normalizeMax(hk)
-      title = "iter = pre r = "+str(r)
-      plotSequences(st,[f,g],labels=["f","g"],title=title)
-      plotSequences(st,[f,sg],labels=["f","Sg"],title=title)
-      plotSequences(st,[af,ag],labels=["Af","Ag"],title=title)
-      plotSequences(st,[af,lag],labels=["Af","LAg"],title=title)
-      plotSequences(st,[af,slag],labels=["Af","SLAg"],title=title)
-      plotSequences(st,[f,hslag],labels=["f","HSLAg"],title=title)
-      plotWavelets(Sampling(nh,dt,kh*dt),[hw,hk],title=title)
+  ####The amount of squeezing applied to the PS image.  
+  ntwin = nt
+  uprime = zerofloat(ntwin,nx)
+  for ix in range(0,nx):
+    for it in range(1,ntwin):
+      #uprime[ix][it] = u[ix][itmin+it]-u[ix][itmin+it-1]
+      uprime[ix][it] = u[ix][it]-u[ix][it-1]
+  title = "uprime"
+  plotImageTimeU(st,sx,uprime,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=itmax,
+  title=title,pngDir=pngDir,twocol=True)
+  ####
+  
+  ####This is the warping with wavelets section.
+  ww = WaveletWarpingAfAgEig()
+  ww.setTimeRange(itmin,itmax)
+  ww.setStabilityFactor(sfac)
+  """
+  afag = ww.getInverseAfAg(naf,kaf,nag,kag,u,f,g)
+  awf,awg = separateafag(naf,nag,afag)
+  #Eigenvalue and eigenvector analysis
+  natot = naf+nag
+  for i in range(1):
+    print "eigenvector "+str(i)
+    dump(ww.getEigVector(i))
 
-      niter = 300 
-      for iter in range(niter):
-        print iter
-        aw = ww.getInverseA(na,ka,nh,kh,hw,u,f,g) # estimated inverse
-        print "aw:"
-        dump(aw)
-        hw = ww.getWaveletH(nh,kh,na,ka,aw,u,f,g) # estimated wavelet
-        print "hw:"
-        dump(hw)
-        #hslag = ww.applyHSLA(na,ka,aw,nh,kh,hw,u,g) # PS warping wavelets
-        #ew = ww.rms(sub(f,hslag))
-        #print "ew",ew
-        
-        if iter%50==0:
-          sg = ww.applyS(u,g)
-          ag = ww.applyA(na,ka,aw,g)
-          af = ww.applyA(na,ka,aw,f)
-          lag = ww.applyL(u,ag) # lowpass, if squeezing
-          slag = ww.applyS(u,lag)
-          hslag = ww.applyH(nh,kh,hw,slag)
-          title = "iter = "+str(iter)+" r = "+str(r)
-          #plotSequences(st,[f,g],labels=["f","g"],title=title)
-          #plotSequences(st,[f,sg],labels=["f","Sg"],title=title)
-          #plotSequences(st,[af,ag],labels=["Af","Ag"],title=title)
-          #plotSequences(st,[af,lag],labels=["Af","LAg"],title=title)
-          #plotSequences(st,[af,slag],labels=["Af","SLAg"],title=title)
-          #plotSequences(st,[f,hslag],labels=["f","HSLAg"],title=title)
-          #normalizeMax(aw)
-          SimplePlot.asPoints(aw)
-          normalizeMax(hw)
-          normalizeMax(hk)
-          #plotWavelets(Sampling(nh,dt,kh*dt),[hw,hk],title=title+str(iter))
-      sg = ww.applyS(u,g)
-      ag = ww.applyA(na,ka,aw,g)
-      af = ww.applyA(na,ka,aw,f)
-      lag = ww.applyL(u,ag) # lowpass, if squeezing
-      slag = ww.applyS(u,lag)
-      hslag = ww.applyH(nh,kh,hw,slag)
-      title = "iter = "+str(iter)+" r = "+str(r)
-      plotSequences(st,[f,g],labels=["f","g"],title=title)
-      plotSequences(st,[f,sg],labels=["f","Sg"],title=title)
-      plotSequences(st,[af,ag],labels=["Af","Ag"],title=title)
-      plotSequences(st,[af,lag],labels=["Af","LAg"],title=title)
-      plotSequences(st,[af,slag],labels=["Af","SLAg"],title=title)
-      plotSequences(st,[f,hslag],labels=["f","HSLAg"],title=title)
-      normalizeMax(hw)
-      normalizeMax(hk)
-      plotWavelets(Sampling(nh,dt,kh*dt),[hw,hk],title=title+str(iter))
-      
-def getSinoImages():
-  dataDir = "/Users/Chris/data/sinos/"
-  n1f,n1g,d1,f1 = 501,852,0.004,0.0
-  n2,d2,f2 =  721,0.0150,0.000
-  f = readImage(dataDir+"pp.dat",n1f,n2)
-  g = readImage(dataDir+"ps.dat",n1g,n2)
-  u = readImage(dataDir+"shifts.dat",n1f,n2)
-  u = add(u,rampfloat(0.0,1.0,0.0,n1f,n2))
-  gain(100,f)
-  gain(100,g)
+  print "eigval0/eigval1 = "+str(ww.getEig01Ratio());
+  print "eigval0 = "+str(ww.getEigVal(0));
+  print "eigval1 = "+str(ww.getEigVal(1));
 
-  return f,g,u
+  hwf = ww.getWaveletH(naf,kaf,awf,nhf,khf)
+  hwg = ww.getWaveletH(nag,kag,awg,nhg,khg)
+
+  nhwf = normalizeMAAWOS(hwf)
+  nhwg = normalizeMAAWOS(hwg)
+
+  plotWaveletsPpPs(shf,nhwf,nhwg,0.9,0.8,16.0/9.0,title=title,pngDir=pngDir,twocol=True)
+  """
+  
+def getGBCImages():
+  dataDir = "/Users/Chris/data/gbc/dat/"
+  n1 = 2000
+  n2 = 150
+  n3 = 145
+  #get 3D images
+  f = readImage(dataDir+"pp.dat",n1,n2,n3)
+  g = readImage(dataDir+"ps1.dat",n1,n2,n3)
+  u = readImage(dataDir+"u_sag_linear.dat",n1,n2,n3)
+
+  #get 2D images
+  il = 70 #inline
+  f2D = zerofloat(2000,145)
+  g2D = zerofloat(2000,145)
+  u2D = zerofloat(2000,145)
+  for i3 in range(0,145):
+    for i1 in range(0,2000):
+      f2D[i3][i1] = f[il][i3][i1]
+      g2D[i3][i1] = g[il][i3][i1]
+      u2D[i3][i1] = u[il][i3][i1]
+  SimplePlot.asPixels(u2D)
+  u2D = add(u2D,rampfloat(0.0,1.0,0.0,n1,n2))
+  gain(100,f2D)
+  gain(100,g2D)
+  return f2D,g2D,u2D
+
+def getGBCImagesRaw():
+  dataDir = "/Users/Chris/data/gbc/dat/"
+  n1 = 2000
+  n2 = 150
+  n3 = 145
+  #get 3D images
+  f = readImage(dataDir+"pp.dat",n1,n2,n3)
+  g = readImage(dataDir+"ps1.dat",n1,n2,n3)
+  u = readImage(dataDir+"u_sag_linear.dat",n1,n2,n3)
+
+  #get 2D images
+  il = 70 #inline
+  f2D = zerofloat(2000,145)
+  g2D = zerofloat(2000,145)
+  u2D = zerofloat(2000,145)
+  for i3 in range(0,145):
+    for i1 in range(0,2000):
+      f2D[i3][i1] = f[il][i3][i1]
+      g2D[i3][i1] = g[il][i3][i1]
+      u2D[i3][i1] = u[il][i3][i1]
+  return f2D,g2D,u2D
 
 def readImage(fileName,n1,n2):
   x = zerofloat(n1,n2)
+  ais = ArrayInputStream(fileName)
+  ais.readFloats(x)
+  ais.close()
+  return x
+
+def readImage(fileName,n1,n2,n3):
+  x = zerofloat(n1,n2,n3)
   ais = ArrayInputStream(fileName)
   ais.readFloats(x)
   ais.close()
@@ -141,6 +169,16 @@ def gain(hw,f):
 
 def normalizeMax(f):
   return mul(1.0/max(abs(f)),f,f)
+
+def normalizeMAAWOS(f):
+  minf = min(f)
+  maxf = max(f)
+  absminf = abs(minf) 
+  absmaxf = abs(maxf) 
+  if absminf<absmaxf:
+    return mul(1.0/maxf,f)
+  else:
+    return mul(1.0/minf,f)
 
 def normalizeRms(f):
   mul(1.0/rms(f),f,f)
@@ -235,16 +273,12 @@ def plotWavelets(st,hs,hmax=None,title=None):
   nh = len(hs)
   hsmax = 0
   for ih in range(nh):
-    if ih==0:
-      pv = sp.addPoints(st,hs[ih])
-      pv.setLineStyle(PointsView.Line.NONE)
-      pv.setMarkStyle(PointsView.Mark.FILLED_CIRCLE)
-      pv.setMarkSize(3.4)
-      hsmax = max(hsmax,abs(max(hs[ih])),abs(min(hs[ih])))
-    elif hs[ih]:
-      pv = sp.addPoints(st,hs[ih])
-      pv.setLineStyle(PointsView.Line.SOLID)
-      pv.setLineWidth(1)
+    if hs[ih]:
+      #pv = sp.addPoints(st,hs[ih])
+      #pv.setLineStyle(ls[ih])
+      sv = sp.addSequence(st,hs[ih])
+      sv.setColor(cs[ih])
+      #pv.setLineWidth(2)
       hsmax = max(hsmax,abs(max(hs[ih])),abs(min(hs[ih])))
   if hmax==None:
     hmax = hsmax*1.05
@@ -270,8 +304,7 @@ def plotImage(st,sx,f,zoom=False,png=None):
   else: 
     sp.setTitle(png)
 
-def plotImageTime(st,sx,f,vlabel,itmin=None,itmax=None,title=None,pngDir=None,
-  halfcol=None,onecol=None,twocol=None):
+def plotImageTimeHalf(st,sx,f,vlabel,fracWidth,fracHeight,aspectRatio,itmin=None,itmax=None,title=None,pngDir=None,halfcol=None,onecol=None,twocol=None):
   dt = st.getDelta()
   wpt = 240
   sp = SimplePlot(SimplePlot.Origin.UPPER_LEFT)
@@ -285,22 +318,129 @@ def plotImageTime(st,sx,f,vlabel,itmin=None,itmax=None,title=None,pngDir=None,
   if itmin:
     sp.setVLimits(itmin*dt,itmax*dt)
 
+  sp.setSize(480,560)
   if title:
     if pngDir==None:
       sp.setTitle(title)
   if pngDir:
-    if halfcol:
-      sp.setFontSizeForPrint(8.0,111.0)
-      pngDir = pngDir+title+"halfcol.png"
-      sp.paintToPng(720.0,1.54,pngDir)
     if onecol:
-      sp.setFontSizeForPrint(8.0,222.0)
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
       pngDir = pngDir+title+"onecol.png"
-      sp.paintToPng(720.0,3.23,pngDir)
+      sp.paintToPng(720.0,3.08,pngDir)
     if twocol:
-      sp.setFontSizeForPrint(8.0,469.0)
-      pngDir = pngDir+title+"twocol.png"
-      sp.paintToPng(720.0,6.51,pngDir)
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"twocol.png"
+      sp.paintToPng(720.0,3.0,pngDir)
+
+def plotImageTimeWhole(st,sx,f,vlabel,fracWidth,fracHeight,aspectRatio,itmin=None,itmax=None,title=None,pngDir=None,
+  halfcol=None,onecol=None,twocol=None):
+  dt = st.getDelta()
+  wpt = 240
+  sp = SimplePlot(SimplePlot.Origin.UPPER_LEFT)
+  pv = sp.addPixels(st,sx,f)
+  pv.setClips(-2.0,2.0)
+  sp.setVLabel(vlabel)
+  sp.setHLabel("Distance (km)")
+  sp.setVInterval(0.1)
+  sp.setHInterval(2.0)
+  if itmin:
+    sp.setVLimits(itmin*dt,itmax*dt)
+
+  sp.setSize(960,560)
+  if title:
+    if pngDir==None:
+      sp.setTitle(title)
+  if pngDir:
+    if onecol:
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"onecol.png"
+      sp.paintToPng(720.0,3.08,pngDir)
+    if twocol:
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"twocol.png"
+      #sp.paintToPng(720.0,3.0,pngDir)
+      sp.paintToPng(720.0,14.0,pngDir)
+
+def plotImageTimeU(st,sx,f,vlabel,fracWidth,fracHeight,aspectRatio,itmin=None,itmax=None,title=None,pngDir=None,
+  halfcol=None,onecol=None,twocol=None):
+  dt = st.getDelta()
+  wpt = 240
+  sp = SimplePlot(SimplePlot.Origin.UPPER_LEFT)
+  pv = sp.addPixels(st,sx,f)
+  pv.setColorModel(ColorMap.JET)
+  pv.setClips(0,1.8)
+  sp.addColorBar()
+  sp.setVLabel(vlabel)
+  sp.setHLabel("Distance (km)")
+  sp.setVInterval(0.5)
+  sp.setHInterval(2.0)
+  if itmin:
+    sp.setVLimits(itmin*dt,itmax*dt)
+
+  sp.setSize(960,560)
+  if title:
+    if pngDir==None:
+      sp.setTitle(title)
+  if pngDir:
+    if onecol:
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"onecol.png"
+      sp.paintToPng(720.0,3.08,pngDir)
+    if twocol:
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"twocol.png"
+      sp.paintToPng(720.0,3.0,pngDir)
+
+def plot2ImagesSideBySide(st, sx, f, g, itmin, itmax, 
+  ixmin, ixmax, ticintV, ticintH, amax, fracWidth, fracHeight, aspectRatio,title=None, pngDir=None, onecol=None, twocol=None):
+  dt = st.getDelta()
+  dx = sx.getDelta()
+  xmin = ixmin*dx
+  xmax = ixmax*dx
+  tmin = itmin*dt
+  tmax = itmax*dt
+  pv1 = PixelsView(st,sx,f)
+  pv1.setOrientation(PixelsView.Orientation.X1DOWN_X2RIGHT)
+  pv1.setClips(-2.0,2.0)
+  pv2 = PixelsView(st,sx,g)
+  pv2.setOrientation(PixelsView.Orientation.X1DOWN_X2RIGHT)
+  pv2.setClips(-2.0,2.0)
+  
+  pp = PlotPanel(1,2,PlotPanel.Orientation.X1DOWN_X2RIGHT,
+  PlotPanel.AxesPlacement.LEFT_TOP)
+  pp.addTiledView(0,0,pv1)
+  pp.addTiledView(0,1,pv2)
+  pp.setVLimits(tmin,tmax)
+  pp.setHLimits(0,xmin,xmax)
+  pp.setHLimits(1,xmin,xmax)
+  #pp.setHLabel(0,"Amplitude")
+  #pp.setHLabel(1,"Amplitude")
+  #pp.setHLabel(2,"Amplitude")
+  #pp.setHLabel(3,"Amplitude")
+  pp.setHLabel(0,"Distance (km)")
+  pp.setHLabel(1,"Distance (km)")
+  pp.setVLabel("PP time (s)")
+  pp.setHInterval(0,ticintH)
+  pp.setHInterval(1,ticintH)
+  pp.setVInterval(ticintV)
+  pf = PlotFrame(pp)
+  pf.setSize(960,560)
+  if title:
+    if pngDir==None:
+      pp.setTitle(title)
+  if pngDir:
+    if onecol:
+      pf.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"onecol.png"
+      pf.paintToPng(720.0,3.08,pngDir)
+    if twocol:
+      print "zz = "+str(aspectRatio)
+      pf.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"twocol.png"
+      pf.paintToPng(720.0,3.0,pngDir)
+  pf.setVisible(True)
+  pf.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+
 
 def plot3ImagesSideBySide(st, sx, f, sg, hslag, itmin, itmax, 
   ixmin, ixmax, ticintV, ticintH, amax, teaser, title=None, pngDir=None, onecol=None, twocol=None):
@@ -537,7 +677,7 @@ def plot4Images4Square(st, sx, f, hslag, hslg, sg, tmin, tmax,
   pf.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
 
 
-def plotWaveletsPpPs(st,h1,h2,title=None,
+def plotWaveletsPpPs(st,h1,h2,fracWidth,fracHeight,aspectRatio,title=None,
   pngDir=None,halfcol=None,onecol=None,twocol=None):
   wpt = 240
   pp = PlotPanel(2,1)
@@ -556,28 +696,23 @@ def plotWaveletsPpPs(st,h1,h2,title=None,
 
   pp.setHLabel("Time (s)")
   pf = PlotFrame(pp)
-  pf.setSize(175,450)
-  pf.setFontSizeForPrint(8,wpt)
-  pf.setVisible(True)
+  pf.setSize(960,560)
   if title:
     if pngDir==None:
       pp.setTitle(title)
   if pngDir:
-    if halfcol:
-      pf.setFontSizeForPrint(8.0,111.0)
-      pngDir = pngDir+title+"halfcol.png"
-      pf.paintToPng(720.0,1.54,pngDir)
     if onecol:
-      pf.setFontSizeForPrint(8.0,222.0)
+      pf.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
       pngDir = pngDir+title+"onecol.png"
       pf.paintToPng(720.0,3.08,pngDir)
     if twocol:
-      pf.setFontSizeForPrint(8.0,469.0)
-      pngDir = pngDir+title+"twocol.png"
-      pf.paintToPng(720.0,6.51,pngDir)
-
-  #if pngDir and png:
-    #pf.paintToPng(720,wpt/72.0,pngDir+png+".png")
+      print "zz = "+str(aspectRatio)
+      pf.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"twocol.png"
+      #pf.paintToPng(720.0,3.0,pngDir)
+      pf.paintToPng(720.0,14.0,pngDir)
+  pf.setVisible(True)
+  pf.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
 
 def plotWaveletsPpPsSide(st,h1,h2,title=None,
   pngDir=None,halfcol=None,onecol=None,twocol=None):
@@ -663,6 +798,36 @@ def computeAmplitudeSpectrum(st, fs, nfft, p):
   #af = mul(1.0f/amax,af);
   return af;
 
+def calcMax(x):
+  nt = len(x[0])
+  nx = len(x)
+  max = 0.0
+  for ix in range(nx):
+    for it in range(nt):
+      if max < x[ix][it]:
+        max = x[ix][it]
+  return max
+
+def max(x):
+  nt = len(x)
+  max = 0.0
+  for it in range(nt):
+    if max < x[it]:
+      max = x[it]
+  return max
+
+def separateafag(naf,nag,afag):
+  na = naf+nag
+  af = zerofloat(naf)
+  ag = zerofloat(nag)
+  for i in range(0,naf):
+    af[i] = afag[i]
+  ii=0
+  for i in range(naf,na):
+    ag[ii] = afag[i]
+    ii = ii + 1
+  return af,ag
+
 def plotSpectrum(sf,spec,title,amax=None):
   sp = SimplePlot(SimplePlot.Origin.LOWER_LEFT)
   sp.setVLabel("Amplitude")
@@ -672,6 +837,119 @@ def plotSpectrum(sf,spec,title,amax=None):
   if amax:
     sp.setVLimits(0,amax)
   pv = sp.addPoints(sf,spec)
+
+def plotRMSDiff(st,ea,fracWidth,fracHeight,aspectRatio,hmin,hmax,color=None,title=None,pngDir=None,
+  onecol=None,twocol=None):
+  sp = SimplePlot()
+  nh = len(ea)
+  pv = sp.addPoints(st,ea)
+  pv.setLineStyle(PointsView.Line.SOLID)
+  pv.setLineWidth(2)
+  pv.setMarkStyle(PointsView.Mark.FILLED_CIRCLE)
+  pv.setMarkSize(20)
+  if color:
+    pv.setLineColor(color)
+    pv.setMarkColor(color)
+  sp.setVLimits(hmin,hmax)
+  sp.setHLabel("Iteration")
+  sp.setVLabel("RMS differences")
+  
+  sp.setSize(960,560)
+  if title:
+    if pngDir==None:
+      sp.setTitle(title)
+  if pngDir:
+    if onecol:
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"onecol.png"
+      sp.paintToPng(720.0,3.08,pngDir)
+    if twocol:
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"twocol.png"
+      sp.paintToPng(720.0,3.0,pngDir)
+
+def plotRMSDiff3(st,ea,eb,ec,fracWidth,fracHeight,aspectRatio,hmin,hmax,title=None,pngDir=None,
+  onecol=None,twocol=None):
+  sp = SimplePlot()
+  nh = len(ea)
+  pv = sp.addPoints(st,ea)
+  color = Color.BLACK
+  pv.setLineColor(color)
+  pv.setMarkColor(color)
+  pv.setLineStyle(PointsView.Line.SOLID)
+  pv.setLineWidth(2)
+  pv.setMarkStyle(PointsView.Mark.FILLED_CIRCLE)
+  pv.setMarkSize(20)
+  pv = sp.addPoints(st,eb)
+  color = Color.RED
+  pv.setLineColor(color)
+  pv.setMarkColor(color)
+  pv.setLineStyle(PointsView.Line.SOLID)
+  pv.setLineWidth(2)
+  pv.setMarkStyle(PointsView.Mark.FILLED_CIRCLE)
+  pv.setMarkSize(20)
+  pv = sp.addPoints(st,ec)
+  color = Color.BLUE
+  pv.setLineColor(color)
+  pv.setMarkColor(color)
+  pv.setLineStyle(PointsView.Line.SOLID)
+  pv.setLineWidth(2)
+  pv.setMarkStyle(PointsView.Mark.FILLED_CIRCLE)
+  pv.setMarkSize(20)
+  sp.setVLimits(hmin,hmax)
+  sp.setHLabel("Iteration")
+  sp.setVLabel("RMS differences")
+  
+  sp.setSize(960,560)
+  if title:
+    if pngDir==None:
+      sp.setTitle(title)
+  if pngDir:
+    if onecol:
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"onecol.png"
+      sp.paintToPng(720.0,3.08,pngDir)
+    if twocol:
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"twocol.png"
+      sp.paintToPng(720.0,3.0,pngDir)
+
+def plotRMSDiff2(st,ea,eb,fracWidth,fracHeight,aspectRatio,hmin,hmax,color1=None,color2=None,title=None,pngDir=None,
+  onecol=None,twocol=None):
+  sp = SimplePlot()
+  nh = len(ea)
+  pv = sp.addPoints(st,ea)
+  if color1:
+    pv.setLineColor(color1)
+    pv.setMarkColor(color1)
+  pv.setLineStyle(PointsView.Line.SOLID)
+  pv.setLineWidth(2)
+  pv.setMarkStyle(PointsView.Mark.FILLED_CIRCLE)
+  pv.setMarkSize(20)
+  pv = sp.addPoints(st,eb)
+  if color2:
+    pv.setLineColor(color2)
+    pv.setMarkColor(color2)
+  pv.setLineStyle(PointsView.Line.SOLID)
+  pv.setLineWidth(2)
+  pv.setMarkStyle(PointsView.Mark.FILLED_CIRCLE)
+  pv.setMarkSize(20)
+  sp.setVLimits(hmin,hmax)
+  sp.setHLabel("Iteration")
+  sp.setVLabel("RMS differences")
+  sp.setSize(960,560)
+  if title:
+    if pngDir==None:
+      sp.setTitle(title)
+  if pngDir:
+    if onecol:
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"onecol.png"
+      sp.paintToPng(720.0,3.08,pngDir)
+    if twocol:
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"twocol.png"
+      sp.paintToPng(720.0,3.0,pngDir)
 
 
 

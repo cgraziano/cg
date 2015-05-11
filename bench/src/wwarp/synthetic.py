@@ -1,233 +1,426 @@
+
 from imports import *
 from edu.mines.jtk.dsp.Conv import *
-from dwarp import Warp, DynamicWarpingW 
-from testing import Synthetic
-from linalgebra import ToeplitzRecursion
+from java.util import Random
 
-pngDir = "./png/synthetic/"
-#pngDir = None
+def createSyntheticLn1D(freqc,decayc,mpc,freqd,decayd,mpd,
+  r0,r1,v,nrmsf,nrmsg,nt,ni,randomi,moreps):
+  u,p,q,itmin,itmax = lnupq(r0,r1,v,nt,ni,randomi,moreps)
+  f = addWavelet(freqc,decayc,p,mpc)
+  g = addWavelet(freqd,decayd,q,mpd)
+  f,noisef = addNoise(nrmsf,42,f)
+  g,noiseg = addNoise(nrmsg,43,g)
+  return p,q,f,g,noisef,noiseg,u,itmin,itmax
 
-def main(args):
-  awarp1 = 2
-  tmin,tmax = .1,.3
-  #for i in range(20):
-  #  tmin = ftmin+i*.1
-  estimateWaveletNoOSamp(awarp1,tmin,tmax)
-  #estimateWaveletNoOSamp(awarp2)
+#Sets 2 impulses in p to always be at the same time.
+def createSyntheticLn1DSimple(freqc,decayc,mpc,freqd,decayd,mpd,
+  r0,r1,v,nrmsf,nrmsg,nt,randomi,moreps):
+  u,p,q,itmin,itmax = lnupqsimple(r0,r1,v,nt,randomi,moreps)
+  f = addWavelet(freqc,decayc,p,mpc)
+  g = addWavelet(freqd,decayd,q,mpd)
+  f,noisef = addNoise(nrmsf,42,f)
+  g,noiseg = addNoise(nrmsg,43,g)
+  return p,q,f,g,noisef,noiseg,u,itmin,itmax
 
-
-def estimateWaveletNoOSamp(awarp,tmin,tmax):
-  na,ka = 3,0
-  nh,kh = 800,-125
-  fpeak,decay = 30,0.02
-  nt,dt,ft = 2000,.002,0
-  st = Sampling(nt,dt,ft)
-  rt = [.202]
-  ra = [1]
-  hf,hg = makeTraces(st,rt,ra,awarp,fpeak,decay,zp=True)
-  plotTrace(st,hf,0,3,3,"hf")
-  plotTrace(st,hg,0,3,3,"hg")
-  dt1 = .001
-  nt1 = 4000
-  ft1 = 0
-  st1 = Sampling(nt1,dt1,ft1)
+def createSyntheticLn1DFilteredNoise(knoiseupper,width,freqc,decayc,mpc,freqd,decayd,mpd,
+  r0,r1,v,nrmsf,nrmsg,nt,ni,randomi,moreps):
+  u,p,q,itmin,itmax = lnupq(r0,r1,v,nt,ni,randomi,moreps)
+  f = addWavelet(freqc,decayc,p,mpc)
+  g = addWavelet(freqd,decayd,q,mpd)
+  f,noisef = addNoiseFiltered(knoiseupper,width,nrmsf,42,f)
+  g,noiseg = addNoiseFiltered(knoiseupper,width,nrmsg,43,g)
+  return p,q,f,g,noisef,noiseg,u,itmin,itmax
 
 
-  dt = st.getDelta()
-  odt = 1.0/dt
-  warp = Warp()
-  #dww = DynamicWarpingW(warp)
-  #dww.setTimeRange(int(tmin*odt),int(tmax*odt))
-  #dww.setStabilityFactor(1.00)
-  #halfNyq = .25*odt#((1/2)*(1/(2*dt))
-  #if awarp>2:
-  #  maxf = halfNyq*2
-  #else:
-  #  maxf = halfNyq*awarp
-  #shg = warp.apply(st,awarp,hg)
-  #plotTrace(st,shg,0,3,3,"shg")
-  #dww.plotAmplitudeSpectrum(st,shg,False,"shg");
-    
-  #dww.setFrequencyRange(0*dt,maxf*dt)
-  #a = dww.getInverseAWarpNoOSamp(na,ka,st,st,awarp,hf,hg)
-  #h = dww.getWaveletH(na,ka,a,nh,kh)
-  #hsyn = getArWavelet(st,fpeak,decay,nh,kh,zp=False)
-  #title = "Estimated Wavelet, "+str(awarp)+\
-  #" time "+str(tmin)+", "+str(tmax)
-  #plotWavelets(Sampling(nh,st.getDelta(),kh*st.getDelta()),
-  #  [hsyn,h],title=title)
-  #bdf,bbdf,bdg,bsdg,bbsdg,d = False,False,True,True,False,False
-  #dww.plotDifferencePlots(bdf,bbdf,bdg,bsdg,bbsdg,d,0,3,3)
-  
-  bdg,bsdg = True,True
-  #dww.plotDifferenceSpectrums(bdg,bsdg,0)
-  #dww.plotAmplitudeSpectrum(Sampling(nh,st.getDelta(),kh*st.getDelta()),
-  #h,False,"h Amplitude Spectrum");
-  #dww.plotAmplitudeSpectrum(st,hg,False,"hg");
-  print "a awarp = "+str(awarp)
-  dump(a)
-  return a
+def createSyntheticLn2D(freqc,decayc,mpc,freqd,decayd,mpd,
+  r0,r1,v,nrmsf,nrmsg,nx,nt,ni,randomi,moreps):
+  u1,p1,q1,itmin,itmax = lnupq(r0,r1,v,nt,ni,randomi,moreps)
+  u = replicateTrace(nx,u1)
+  p = replicateTrace(nx,p1)
+  q = replicateTrace(nx,q1)
+  f = addWavelet2D(freqc,decayc,p,mpc)
+  g = addWavelet2D(freqd,decayd,q,mpd)
+  f,noisef = addNoise2D(nrmsf,42,f)
+  g,noiseg = addNoise2D(nrmsg,43,g)
+  #dump(f)
+  print "itmin = "+str(itmin)
+  print "itmax = "+str(itmax)
+  return p,q,f,g,noisef,noiseg,u,itmin,itmax
 
-def estimateWavelet(awarp):
-  na,ka = 3,0
-  nh,kh = 250,-125
-  fpeak,decay = 50,0.15
-  nt,dt,ft = 500,.002,0
-  st = Sampling(nt,dt,ft)
-  rt = .2,.8
-  ra = 1,1
-  hf,hg = makeTraces(st,rt,ra,awarp,fpeak,decay,zp=None)
-  plotTrace(st,hf,0,0.998,2,"hf")
-  plotTrace(st,hg,0,0.998,2,"hg")
+def createSyntheticLn2DSimple(freqc,decayc,mpc,freqd,decayd,mpd,
+  r0,r1,v,nrmsf,nrmsg,nx,nt,randomi,moreps):
+  u1,p1,q1,itmin,itmax = lnupqsimple(r0,r1,v,nt,randomi,moreps)
+  u = replicateTrace(nx,u1)
+  p = replicateTrace(nx,p1)
+  q = replicateTrace(nx,q1)
+  f = addWavelet2D(freqc,decayc,p,mpc)
+  g = addWavelet2D(freqd,decayd,q,mpd)
+  f,noisef = addNoise2D(nrmsf,42,f)
+  g,noiseg = addNoise2D(nrmsg,43,g)
+  #dump(f)
+  print "itmin = "+str(itmin)
+  print "itmax = "+str(itmax)
+  return p,q,f,g,noisef,noiseg,u,itmin,itmax
 
-  dt = st.getDelta()
-  odt = 1.0/dt
-  #hf = balance(40,hf)
-  #hg = balance(40,hg)
-  #plotTrace(st,hf,0,0.998,2,"balance hf")
-  #plotTrace(st,hg,0,0.998,2,"balance hg")
-  warp = Warp()
-  dww = DynamicWarpingW(warp)
-  dww.setTimeRange(int(.15*odt),int(.7*odt))
-  dww.setStabilityFactor(1.00)
-  dww.setFrequencyRange(5*dt,85*dt)
-  a = dww.getInverseAWarp(na,ka,st,st,awarp,hf,hg)
-  h = dww.getWaveletH(na,ka,a,nh,kh)
-  hsyn = getArWavelet(st,fpeak,decay,nh,kh)
-  SimplePlot.asPoints(hsyn)
-  title = "Estimated Wavelet, "+str(awarp)
-  plotWavelets(Sampling(nh,st.getDelta(),kh*st.getDelta()),
-    [h,hsyn],title=title)
-  xcorfunc = zerofloat(nh+kh);
-  xcor(nh,kh,hsyn,nh,kh,h,nh+kh,0,xcorfunc)
-  bdf,bdg,bdgO,bsdgO,bsdg,d = True,True,True,True,True,True
-  #dww.plotDifferencePlots(bdf,bdg,bdgO,bsdgO,bsdg,d,0,0.998,3)
-  #dww.plotDifferencePlots(bdf,bdg,bsdg,d,0,0.998,3)
-  bdg,bdgO,bsdgO,bsdg = True,True,True,True
-  #dww.plotDifferenceSpectrums(bdg,bdgO,bsdgO,bsdg,0)
-  #dww.plotDifferenceSpectrums(bdg,bsdg,0)
-  print "a awarp = "+str(awarp)
-  dump(a)
-  return a
+def lnupq(r0,r1,v,nt,ni,randomi,moreps):
+  umax = nt-1
+  p = zerofloat(nt)
+  q = zerofloat(nt)
+  u = zerofloat(nt)
+  si = SincInterpolator.fromErrorAndFrequency(0.01,0.40)
+  print "max length = "+str(si.getMaximumLength())
+  if (r0==r1):
+    print "r0==r1"
+    for n in range(nt):
+      u[n] = r0*n+v
+    dq = (umax-v-50)/float(ni+1)
+    ts = rampfloat(dq+v+31,dq,ni)  
+    ran = Random(55)
+    #rj=1.0
+    for ji in range(ni):
+      rj = 1.0
+      if randomi:
+        rj = 2.0*ran.nextFloat()-1.0
+      tq = ts[ji]#time u
+      tp = (tq-v)/r0#time t(u)
+      #print "tq = "+str(tq)
+      #print "tp = "+str(tp)
+      si.accumulate(tp,rj,nt,1.0,0.0,p)
+      si.accumulate(tq,rj,nt,1.0,0.0,q)
+    #for impulses seen in p, but not in q
+    if moreps:
+      tsni = ts[ni-1]
+      ulastp = r0*nt+v#the u that corresponds to the last impulse in p
+      nexi = int((ulastp-tsni)/dq)#extra i to fill in the rest of p
+      if (nexi>0):
+        exts = rampfloat(tsni+dq,dq,nexi)
+        for ji in range(nexi):
+          rj = 1.0
+          if randomi:
+            rj = 2.0*ran.nextFloat()-1.0
+          tq = exts[ji]#time u
+          tp = (tq-v)/r0#time t(u)
+          #print "tq = "+str(tq)
+          #print "tp = "+str(tp)
+          si.accumulate(tp,rj,nt,1.0,0.0,p)
+          #si.accumulate(tq,rj,nt,1.0,0.0,q)
+    itmin = 0#lock
+    itmax = int((ts[ni-1]-v)/r0+0.5)
+    return u,p,q,itmin,itmax
+  else: 
+    print "r0>r1" 
+    a = (umax-v)/log(r0/r1)
+    b = r0*log(r0/r1)/(umax-v)
+    for n in range(nt):
+      u[n] = a*log(1.0+b*n)+v
+    print "a = "+str(a)
+    print "b = "+str(b)
+    dq = (umax-v-50)/float(ni+1)
+    print "dq = "+str(dq)
+    ts = rampfloat(dq+v+31,dq,ni)  
+    #ts = rampfloat(dq+v+100,dq,ni)  
+    ran = Random(55)
+    #rj = 1.0
+    for ji in range(ni):
+      rj = 1.0
+      if randomi:
+        rj = 2.0*ran.nextFloat()-1.0
+      tq = ts[ji]#time u
+      tp = (exp((tq-v)/a)-1.0)/b#time t(u)
+      #print "tq = "+str(tq)
+      #print "tp = "+str(tp)
+      si.accumulate(tp,rj,nt,1.0,0.0,p)
+      si.accumulate(tq,rj,nt,1.0,0.0,q)
+    #for impulses seen in p, but not in q
+    if moreps:
+      tsni = ts[ni-1]
+      ulastp = a*log(b*nt+1)+v#the u that corresponds to the last impulse in p
+      nexi = int((ulastp-tsni)/dq)#extra i to fill in the rest of p
+      exts = rampfloat(tsni+dq,dq,nexi)
+      for ji in range(nexi):
+        rj = 1.0
+        if randomi:
+          rj = 2.0*ran.nextFloat()-1.0
+        tq = exts[ji]#time u
+        tp = (exp((tq-v)/a)-1.0)/b#time t(u)
+        si.accumulate(tp,rj,nt,1.0,0.0,p)
+        if tq<umax:
+          si.accumulate(tq,rj,nt,1.0,0.0,q)
+    itmin = 0#lock
+    itmax = int(((exp((ts[ni-1]-v)/a)-1.0)/b)+0.5)#lock
+    print "tsnim1 = "+str(ts[ni-1])
+    return u,p,q,itmin,itmax
 
-  
-def makeTraces(st, rt, ra, awarp, fpeak, decay, zp=None):
-  f,g = makeReflections(st,rt,ra,awarp)
-  plotTrace(st,f,0,3,3,"f")
-  plotTrace(st,g,0,3,3,"g")
-  hf = addArWavelet(st,f,fpeak,decay,zp=zp)
-  hg = addArWavelet(st,g,fpeak,decay,zp=zp)
-  return hf,hg
+#Only meant to be used for 2 impulses
+#Will ensure that the impulses in p will be in the same location for all 
+#r0 and r1s.
+def lnupqsimple(r0,r1,v,nt,randomi,moreps):
+  ni = 2
+  umax = nt-1
+  p = zerofloat(nt)
+  q = zerofloat(nt)
+  u = zerofloat(nt)
+  si = SincInterpolator.fromErrorAndFrequency(0.01,0.40)
+  print "max length = "+str(si.getMaximumLength())
+  if (r0==r1):
+    print "r0==r1"
+    for n in range(nt):
+      u[n] = r0*n+v
+    dq = (umax-v-50)/float(ni+1)
+    ts = rampfloat(dq+v+31,dq,ni)  
+    ran = Random(55)
+    #1st impulse
+    rj = 1.0
+    tp = 75
+    tq = tp*r0+v
+    print "tq = "+str(tq)
+    print "tp = "+str(tp)
+    #2nd impulse
+    si.accumulate(tp,rj,nt,1.0,0.0,p)
+    si.accumulate(tq,rj,nt,1.0,0.0,q)
+    #2nd impulse
+    rj = -1.0
+    tp = 150
+    tq = tp*r0+v
+    print "tq = "+str(tq)
+    print "tp = "+str(tp)
+    si.accumulate(tp,rj,nt,1.0,0.0,p)
+    si.accumulate(tq,rj,nt,1.0,0.0,q)
+    itmin = int((ts[0]-v)/r0+0.5)
+    itmax = int((ts[ni-1]-v)/r0+0.5)
+    return u,p,q,itmin,itmax
+  else: 
+    print "r0>r1" 
+    a = (umax-v)/log(r0/r1)
+    b = r0*log(r0/r1)/(umax-v)
+    for n in range(nt):
+      u[n] = a*log(1.0+b*n)+v
+    print "a = "+str(a)
+    print "b = "+str(b)
+    dq = (umax-v-50)/float(ni+1)
+    print "dq = "+str(dq)
+    ts = rampfloat(dq+v+31,dq,ni)  
+    #ts = rampfloat(dq+v+100,dq,ni)  
+    ran = Random(55)
+    #1st impulse
+    rj = 1.0
+    tp = 75
+    tq = a*log(1.0+b*tp)+v
+    print "tq = "+str(tq)
+    print "tp = "+str(tp)
+    si.accumulate(tp,rj,nt,1.0,0.0,p)
+    si.accumulate(tq,rj,nt,1.0,0.0,q)
+    #2nd impulse
+    rj = -1.0
+    tp = 150
+    tq = a*log(1.0+b*tp)+v
+    print "tq = "+str(tq)
+    print "tp = "+str(tp)
+    si.accumulate(tp,rj,nt,1.0,0.0,p)
+    si.accumulate(tq,rj,nt,1.0,0.0,q)
 
-def makeReflections(st, rt, ra, awarp):
-  nt = st.getCount()
-  dt = st.getDelta()
-  ft = st.getFirst()
-  nref = len(rt)
-  rt1 = rt
-  rt2 = mul(awarp,rt)
-  ra1 = ra
-  ra2 = ra
-  f = zerofloat(nt)
-  g = zerofloat(nt)
-  si = SincInterp.fromErrorAndFrequency(0.01, 0.45)
-  for ir in range(0,nref):
-    rti = rt1[ir]
-    rai = ra1[ir]
-    si.accumulate(rti,rai,nt,dt,ft,f)
-    rti = rt2[ir]
-    rai = ra2[ir]
-    si.accumulate(rti,rai,nt,dt,ft,g)
-  return f,g
+    itmin = 0#lock
+    itmax = int(((exp((ts[ni-1]-v)/a)-1.0)/b)+0.5)#lock
+    print "tsnim1 = "+str(ts[ni-1])
+    return u,p,q,itmin,itmax
 
-def getArWavelet(st,fpeak,decay,nh,kh,zp=False):
+
+def addWavelet(fpeak,decay,p,mp):
+  print "############### Add Wavelet ###############"
+  w = 2.0*PI*fpeak
+  if not mp:
+    decay *= 2.0
+    w -= 2.0*PI*0.04
   r = exp(-decay)
-  w = 2.0*PI*fpeak*st.delta
+  print "w = "+str(w)
+  print "r = "+str(r)
   a1,a2 = -2.0*r*cos(w),r*r
-  print "a1 =",a1," a2 =",a2
+  #print "a =",[1,a1,a2]
+  #poles = [Cdouble.polar(r,w),Cdouble.polar(r,-w),Cdouble.polar(r,w1),Cdouble.polar(r,-w1)]
   poles = [Cdouble.polar(r,w),Cdouble.polar(r,-w)]
+  #poles = [Cdouble.polar(0.8,0)]
   zeros = []
   gain = 1.0
-  if zp:
-    gain *= sqrt(1.0+a1*a1+a2*a2)
-  x = zerofloat(nh)
-  t = zerofloat(nh)
-  h = zerofloat(nh)
-  x[-kh] = 1.0
-  rcf = RecursiveCascadeFilter(poles,zeros,gain)
-  rcf.applyForward(x,t)
-  if zp:
-    rcf.applyReverse(t,h)
-  else:
-    copy(t,h)
-  return h
-
-
-def addArWavelet(st, p, fpeak, decay, zp=False):
-  r = exp(-decay)
-  w = 2.0*PI*fpeak*st.delta
-  a1,a2 = -2.0*r*cos(w),r*r
-  poles = [Cdouble.polar(r,w),Cdouble.polar(r,-w)]
-  zeros = []
-  gain = 1.0
-  if zp:
-    gain *= sqrt(1.0+a1*a1+a2*a2)
   x = copy(p)
   t = copy(p)
   rcf = RecursiveCascadeFilter(poles,zeros,gain)
+  #rcf.applyReverse(p,t)
   rcf.applyForward(p,t)
-  if zp:
+  if not mp:
+    w = 2.0*PI*(fpeak+0.04)
+    print "w = "+str(w)
+    print "r = "+str(r)
+    a1,a2 = -2.0*r*cos(w),r*r
+    #print "a =",[1,a1,a2]
+    poles = [Cdouble.polar(r,w),Cdouble.polar(r,-w)]
+    #poles = [Cdouble.polar(0.5,0)]
+    zeros = []
+    gain = 1.0
+    rcf = RecursiveCascadeFilter(poles,zeros,gain)
+    #rcf.applyForward(t,x)
     rcf.applyReverse(t,x)
   else:
     copy(t,x)
+  #conv(2,0,[1.0,-0.95],len(x),0,copy(x),len(x),0,x) # attenuate DC
+  print "############################################"
   return x
 
-def plotTrace(st, p, tmin, tmax, amax, title): 
-  sp = SimplePlot(SimplePlot.Origin.UPPER_LEFT)
-  sp.setVLabel("Time (s)")
-  sp.setSize(400,750)
-  sp.setVLimits(tmin,tmax)
-  sp.setHLimits(-amax,amax)
-  sp.addTitle(title)
-  pv = sp.addPoints(st,p)
+def addWavelet2D(fpeak,decay,p,mp):
+  nx = len(p)
+  nt = len(p[0])
+  f = zerofloat(nt,nx)
+  for ix in range(0,nx):
+    f[ix] = addWavelet(fpeak,decay,p[ix],mp)
+  return f
 
-def plotWavelets(st,hs,hmax=None,title=None,pngDir=None):
-  sp = SimplePlot()
-  ls = [PointsView.Line.SOLID,PointsView.Line.DASH,PointsView.Line.DOT]
-  lw = 1,4,1
-  nh = len(hs)
-  hsmax = 0
-  for ih in range(nh):
-    if hs[ih]:
-      pv = sp.addPoints(st,hs[ih])
-      pv.setLineStyle(ls[ih])
-      pv.setLineWidth(lw[ih])
-      hsmax = max(hsmax,abs(max(hs[ih])),abs(min(hs[ih])))
-  if hmax==None:
-    hmax = hsmax*1.05
-  sp.setVLimits(-hmax,hmax)
-  sp.setHLabel("Time (s)")
-  sp.setVLabel("Amplitude")
-  if title:
-    if pngDir==None:
-      sp.setTitle(title)
-  if pngDir:
-    sp.paintToPng(1000,5,pngDir+title+".png")
+#Returns the signal added with noise and the noise that 
+#was added.
+def addNoise(nrms, seed, f):
+  n = len(f)
+  r = Random(seed)
+  g = mul(2.0,sub(randfloat(r,n),0.5))
+  rgf = RecursiveGaussianFilter(1.0)
+  rgf.apply1(g,g)
+  frms = sqrt(sum(mul(f,f))/n)
+  grms = sqrt(sum(mul(g,g))/n)
+  g = mul(g,nrms*frms/grms)
+  #print "nrms = "+str(nrms)
+  #print "rmsnoise/rmssignal = "+str(rms(g)/rms(f))
+  return add(f,g),g
+#Returns the signal added with noise and the noise that 
+#was added.
+def addNoise2D(nrms, seed, f):
+  nx = len(f)
+  n = len(f[0])
+  r = Random(seed)
+  g = mul(2.0,sub(randfloat(r,n),0.5))
+  g2 = zerofloat(n,nx)
+  rgf = RecursiveGaussianFilter(1.0)
+  rgf.apply1(g,g)
+  frms = sqrt(sum(mul(f,f))/n)
+  grms = sqrt(sum(mul(g,g))/n)
+  g = mul(g,nrms*frms/grms)
+  #print "nrms = "+str(nrms)
+  #print "rmsnoise/rmssignal = "+str(rms(g)/rms(f))
+  for i in range(0,nx):
+    f[i] = add(f[i],g)
+    g2[i] = g
+  return f,g2
 
-def balance(sigma,f):
-  f = add(max(f)*0.00001,f)
-  ff = mul(f,f)
-  RecursiveExponentialFilter(sigma).apply1(ff,ff)
-  return div(f,sqrt(ff))
+#Returns the signal added with noise and the noise that 
+#was added.
+def addNoiseFiltered(knoiseupper,width,nrms, seed, f):
+  n = len(f)
+  r = Random(seed)
+  g = mul(2.0,sub(randfloat(r,n),0.5))
+  rgf = RecursiveGaussianFilter(1.0)
+  rgf.apply1(g,g)
+  frms = sqrt(sum(mul(f,f))/n)
+  grms = sqrt(sum(mul(g,g))/n)
+  g = mul(g,nrms*frms/grms)
+  #print "nrms = "+str(nrms)
+  #print "rmsnoise/rmssignal = "+str(rms(g)/rms(f))
+  gfiltered = zerofloat(n)
+  bpf = BandPassFilter(0.0,knoiseupper,width,0.01)
+  bpf.apply(g,gfiltered)
+  return add(f,gfiltered),gfiltered
+
+#Copies the same trace to create a 2D image
+def replicateTrace(nx,f1):
+  nt = len(f1)
+  f = zerofloat(nt,nx)
+  for i in range(0,nx):
+    f[i] = f1
+  return f
+
+def createSyntheticCos(freq,decay,mp,
+  r0,r1,v,noise,nrmsf,nrmsg,nt,ni):
+  u,p,q,itmin,itmax = cosupq(r0,r1,v,nt,ni)
+  f = addWavelet(freq,decay,p,mp)
+  g = addWavelet(freq,decay,q,mp)
+  if noise:
+    f = addNoise(nrmsf,42,f)
+    g = addNoise(nrmsg,43,g)
+  return p,q,f,g,u,itmin,itmax
+
+def cosupq(r0,r1,c,nt,ni):
+  umax = nt-1
+  p = zerofloat(nt)
+  q = zerofloat(nt)
+  u = zerofloat(nt)
+  si = SincInterpolator.fromErrorAndFrequency(0.01,0.45)
+  if (r0==r1):
+    for n in range(nt):
+      u[n] = r0*n+c
+    dq = umax/float(ni+1)#float cast ensures float division.
+    ts = rampfloat(dq,dq,ni)
+    ran = Random(55)
+    for ji in range(ni):
+      rj = 2.0*ran.nextFloat()-1.0
+      tq = ts[ji] #time u
+      tp = (tq-c)/r0#time t(u)
+      si.accumulate(tp,rj,nt,1.0,0.0,p)
+      si.accumulate(tq,rj,nt,1.0,0.0,q)
+    itmin = 0
+    itmax = int((umax-c)/r0+0.5)
+    return u,p,q,itmin,itmax
+  else:
+    b = r0
+    a = b*sqrt(1-(r1/r0)*(r1/r0))/(umax-c)
+    for n in range(nt):
+      u[n] = b*sin(a*n)/a+c
+    dq = umax/float(ni+1)#float cast ensures float division.
+    ts = rampfloat(dq,dq,ni)
+    ran = Random(55)
+    for ji in range(ni):
+      rj = 2.0*ran.nextFloat()-1.0
+      tq = ts[ji] #time u
+      tp = asin(a*(tq-c)/b)/a
+      si.accumulate(tp,rj,nt,1.0,0.0,p)
+      si.accumulate(tq,rj,nt,1.0,0.0,q)
+    itmin = 0
+    itmax = int((asin(a*(umax-c)/b)/a)+0.5)
+    return u,p,q,itmin,itmax
+
+def sqrtupq(r0,r1,v,nt,ni):
+  umax = nt-1
+  p = zerofloat(nt)
+  q = zerofloat(nt)
+  u = zerofloat(nt)
+  si = SincInterpolator.fromErrorAndFrequency(0.01,0.45)
+  if (r0==r1):
+    for n in range(nt):
+      u[n] = r0*n+v
+    dq = umax/float(ni+1)
+    ts = rampfloat(dq,dq,ni)  
+    ran = Random(55)
+    for ji in range(ni):
+      rj = 2.0*ran.nextFloat()-1.0
+      tq = ts[ji]#time u
+      tp = (tq-v)/r0#time t(u)
+      si.accumulate(tp,rj,nt,1.0,0.0,p)
+      si.accumulate(tq,rj,nt,1.0,0.0,q)
+    itmin = 0
+    itmax = int((tq-v)/r0+0.5)
+    return u,p,q,itmin,itmax
+  else:
+    a = 2.0*(pow(r1,3.0)-pow(r0,3.0))/(3.0*(umax-v))
+    b = r0*r0
+    for n in range(nt):
+      u[n] = (2.0/(3.0*a))*(pow((a*n+b),(3.0/2.0))-pow(b,(3.0/2.0)))+v
+    dq = umax/float(ni+1)
+    ts = rampfloat(dq,dq,ni)  
+    si = SincInterpolator.fromErrorAndFrequency(0.01,0.45)
+    ran = Random(55)
+    for ji in range(ni):
+      rj = 2.0*ran.nextFloat()-1.0
+      tq = ts[ji]#time u
+      tp = (1.0/a)*(pow(3.0*a*(tq-v)/2.0+pow(b,3.0/2.0),(2.0/3.0))-b)#time t(u)
+      si.accumulate(tp,rj,nt,1.0,0.0,p)
+      si.accumulate(tq,rj,nt,1.0,0.0,q)
+    itmin = 0
+    itmax = int(((1.0/a)*(pow(3.0*a*(umax-v)/2.0+pow(b,3.0/2.0),(2.0/3.0))-b))+0.5)
+    return u,p,q,itmin,itmax
 
 
-
-
-#############################################################################
-# Do everything on Swing thread.
-
-class RunMain(Runnable):
-  def run(self):
-    main(sys.argv)
-SwingUtilities.invokeLater(RunMain())
 

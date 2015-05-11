@@ -9,6 +9,7 @@ package wwarp;
 import edu.mines.jtk.dsp.*;
 import edu.mines.jtk.lapack.*;
 import edu.mines.jtk.util.Check;
+import edu.mines.jtk.mosaic.*;
 import static edu.mines.jtk.dsp.Conv.*;
 import static edu.mines.jtk.util.ArrayMath.*;
 
@@ -549,6 +550,8 @@ public class WaveletWarping {
       float[] df = delay(lag,f);
       float[] dg = delay(lag,g);
       float[] sdg = applyS(u,dg);
+      SimplePlot.asPoints(dg);
+      SimplePlot.asPoints(sdg);
       float[] di = sub(sdg,df);
       d[ia] = applyB(di);
     }
@@ -692,7 +695,7 @@ public class WaveletWarping {
    * If necessary, applies an anti-alias filter to the sequence x(t).
    * An anti-alias filter is necessary if the warping includes squeezing.
    */
-  private float[] aaf(float rmax, float[] u, float[] x) {
+  public float[] aaf(float rmax, float[] u, float[] x) {
     int nt = u.length;
     float r = squeezing(rmax,u);
     //System.out.println("r = "+r);
@@ -747,6 +750,7 @@ public class WaveletWarping {
 
   /**
    * Returns y(t) = x(u(t)).
+   * You can think of warp as a interpolator.
    */
   private static float[] warp(float[] u, float[] x) {
     int nt = u.length;

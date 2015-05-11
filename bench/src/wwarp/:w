@@ -1,0 +1,796 @@
+#############################################################################
+# Demo of 2 wavelet estimations from warping.
+
+from imports import *
+
+from edu.mines.jtk.dsp.Conv import *
+from wwarp import WaveletWarping, WaveletWarpingHAEig
+from wwarp import ShapingFilter
+from java.util import Random
+
+############################################################################
+
+#pngDir = "./png/figures/"
+#pngDir = "./png/figuresAbs/"
+pngDir = None
+
+def main(args):
+  decayf,decayg = 0.05,0.05
+  freqf,freqg = 0.08,0.08
+  naf,kaf = 3,0 # sampling for inverse wavelet A in f
+  nag,kag = 3,0 # sampling for inverse wavelet A in g
+  nhf,khf = 181,-90 # sampling for wavelet H in f
+  nhg,khg = 181,-90 # sampling for wavelet H in g
+  mpf = True#is wavelet in f minimum phase?
+  mpg = True#is wavelet in g minimum phase?
+  shift,constwarp,varywarp = False,True,False
+  s = 20
+  r = 2.0 
+  r1,r2 = 1.1,2.0#The first and last warping amounts that will be applied to trace p. 
+                 #A line is used to calculate the warping amount for a particular time.
+  noise = False
+  nrmsf = 0.01
+  nrmsg = 0.01
+  #goSimpleTest(decayf,freqf,mpf,naf,kaf,nhf,khf,\
+  #                    decayg,freqg,mpg,nag,kag,nhg,khg,\
+  #                    shift,s,constwarp,r,varywarp,r1,r2,noise,nrmsf,nrmsg)
+
+
+  icornaf = [3,4,5,6,7,8,9,10]#[3,3,4,4,5,5,6,6,7,7,8]
+  icornag = [3,4,5,6,7,8,9,10]#[3,4,4,5,5,6,6,7,7,8,8]
+  #icorkaf = [0]
+  nicor = len(icornaf)
+  for i in range(nicor):
+    naf = icornaf[i]
+    nag = icornag[i]
+    kaf = 0#icorkaf[i]
+    kag = kaf
+    goSimpleTest(decayf,freqf,mpf,naf,kaf,nhf,khf,\
+                      decayg,freqg,mpg,nag,kag,nhg,khg,\
+                      shift,s,constwarp,r,varywarp,r1,r2,noise,nrmsf,nrmsg)
+
+  nas = [5] 
+  kas = [0]
+  nnas = len(nas)
+  #for i in range(nnas):
+    #testSLG(nas[i],kas[i])
+
+#Test the warping with wavelets algorithm with a variety of parameters:
+#decayf - the decay of the wavelet in trace f.
+#freqf - the frequency the of wavelet in trace f.
+#mpf - is trace f's wavelet minimum phase. 
+#decayg - the decay of the wavelet in trace g.
+#freqg - the frequency the of wavelet in trace g.
+#mpg - is trace g's wavelet minimum phase. 
+#shift - are the p and q shifted versions of one another?
+#s - the number of samples p and q are shifted away from one another.
+#constwarp - is q a warped version of p by a constant factor?
+#r - the factor that q is warped by.
+#varywarp - has a variable warp been applied to q? 
+def goSimpleTest(decayf, freqf, mpf, naf, kaf, nhf, khf,
+                 decayg, freqg, mpg, nag, kag, nhg, khg,
+                 shift, s, constwarp, r, varywarp, r1, r2, noise, nrmsf, nrmsg):
+  #Estimation and sampling parameters.
+  nt,ni = 481,2 # number of time samples; number of impulses
+  dt,ft = 0.004,0.000 # used for plotting only
+  tmin,tmax = 0,nt-1
+  sfac = 1.000
+  amax = 5
+  st = Sampling(nt,dt,ft)
+
+  #Creating wavelets 
+  #hkf = getWavelet(freqf,decayf,nhf,khf,mpf) # known wavelet in f
+  #hkg = getWavelet(freqg,decayg,nhg,khg,mpg) # known wavelet in g
+  fmin,fmax = 0.0,min(0.5,0.5*r) # bandpass (lowpass), if stretching
+  p,q = makeImpulses(shift,s,constwarp,r,varywarp,r1,r2,nt,ni)
+  title = "impulsespsqq"
+  na,ka = 3,0
+  a = getSimpleInverseWavelet(freqf,decayf)
+  #f = addWavelet(freqf,decayf,p,mpf)
+  #g = addWavelet(freqg,decayg,q,mpg)
+  ww = WaveletWarpingHAEig()
+  hkf = ww.getWaveletH(na,ka,a,nhf,khf)
+  hkg = ww.getWaveletH(na,ka,a,nhg,khg)
+  f = ww.applyH(nhf,khf,hkf,p)
+  g = ww.applyH(nhf,khf,hkg,q)
+  if noise:
+    f = addNoise(nrmsf,42,f)
+    g = addNoise(nrmsg,42,g)
+  u = calcPSTime(shift,s,constwarp,r,varywarp,r1,r2,nt)
+  
+  #main piece of wavelet estimation code
+  ww.setFrequencyRange(fmin,fmax)
+  ww.setTimeRange(tmin,tmax)
+  akf = a#ww.getWaveletH(nhf,khf,hkf,naf,kaf) # known inverse wavelet in f
+  akg = a#ww.getWaveletH(nhg,khg,hkg,nag,kag) # known inverse wavelet in g
+
+  afag = ww.getInverseAfAg(naf,kaf,nag,kag,u,f,g)
+  awf,awg = separateafag(naf,nag,afag)
+  
+  hwf = ww.getWaveletH(naf,kaf,awf,nhf,khf)
+  hwg = ww.getWaveletH(nag,kag,awg,nhg,khg)
+  print "***********************************"
+  #print "ak"
+  #print normalize(akf)
+  print "awf = "
+  #print normalize(awf)
+  print (awf)
+  print "awg = "
+  #print normalize(awg)
+  print (awg)
+  print "***********************************"
+
+  #Eigenvalue and eigenvector analysis
+  natot = naf+nag
+  print "eigenvectors"
+  for i in range(2):
+    print ww.getEigVector(i)
+
+  evs = zerofloat(natot)
+  for i in range(0,natot):
+    evs[i] = ww.getEigVal(i)
+    print "eigenvalue "+str(i)+" = "+str(evs[i])
+
+
+
+  #QC wavelet estimation and warping
+  sq = ww.applyS(u,q)
+  lq = ww.applyL(u,q)
+  slq = ww.applyS(u,lq)
+
+  sg = ww.applyS(u,g) 
+  lg = ww.applyL(u,g)
+  slg = ww.applyS(u,lg)
+
+  af = ww.applyA(naf,kaf,awf,f)#k represents known
+  ag = ww.applyA(nag,kag,awg,g)
+  lag = ww.applyL(u,ag)
+  slag = ww.applyS(u,lag) 
+  hslag = ww.applyH(nhf,khf,hwf,slag)
+
+
+
+  
+  #Normalize wavelets
+  nhwf = normalize(hwf)
+  nhkf = normalize(hkf)
+  nhwg = normalize(hwg)
+  nhkg = normalize(hkg)
+  nawf = normalize(awf)
+  nakf = normalize(akf)
+  nawg = normalize(awg)
+  nakg = normalize(akg)
+
+  #plotting
+  amax = 4
+  title = getTitle(shift,s,constwarp,r,varywarp,r1,r2)
+  #plotSequences(st,[p,q],amax=4,labels=["p","q"],title=title)
+  #plotSequences(st,[p,sq],amax=4,labels=["p","Sq"],title=title)
+  #plotSequences(st,[p,lq],amax=4,labels=["p","Lq"],title=title)
+  #plotSequences(st,[p,slq],amax=4,labels=["p","SLq"],title=title)
+
+  ##plotSequences(st,[f,g],amax=4,labels=["f","g"],title=title)
+  #plotSequences(st,[f,sg],amax=4,labels=["f","Sg"],title=title)
+  #plotSequences(st,[f,lg],amax=4,labels=["f","Lg"],title=title)
+  #plotSequences(st,[sg,slg],amax=4,labels=["Sg","SLg"],title=title)
+
+  ##plotSequences(st,[af,ag],amax=4,labels=["Af","Ag"],title=title)
+  ##plotSequences(st,[af,lag],amax=4,labels=["Af","LAg"],title=title)
+  ##plotSequences(st,[af,slag],amax=4,labels=["Af","SLAg"],title=title)
+  ##plotSequences(st,[f,hslag],amax=4,labels=["f","HSLAg"],title=title)
+  ##plotSequences(st,[f,sub(hslag,f)],amax=4,labels=["f","HSLAg-f"],title=title)
+  #plotSequences(st,[slg,hslag],amax=4,labels=["SLg","HSLAg"],title=title)
+
+  plotWavelets(Sampling(nhf,dt,khf*dt),[nhwf,nhkf],title=title+" naf = "+str(naf)+ " kaf = "+str(kaf))
+  plotWavelets(Sampling(nhg,dt,khg*dt),[nhwg,nhkg],title=title+" nag = "+str(nag)+ " kag = "+str(kag))
+  #plotWavelets(Sampling(naf,dt,kaf*dt),[nakg,nakf],title=title+" naf = "+str(naf)+ " kaf = "+str(kaf))
+  #plotWavelets(Sampling(naf,dt,kaf*dt),[nawf],title=title+" naf = "+str(naf)+ " kaf = "+str(kaf))
+  #plotWavelets(Sampling(nag,dt,kag*dt),[nawg],title=title+" nag = "+str(nag)+ " kag = "+str(kag))
+  plotAmplitudeSpectrumT(Sampling(naf,dt,kaf*dt), awf, 0, naf, "Amplitude Spectrum awf"+" naf = "+str(naf)+ " kaf = "+str(kaf), amax=2)
+  plotAmplitudeSpectrumT(Sampling(nag,dt,kag*dt), awg, 0, nag, "Amplitude Spectrum awg"+" nag = "+str(nag)+ " kag = "+str(kag), amax=2)
+  #plotAmplitudeSpectrumT(Sampling(nhf,dt,khf*dt), hwf, -kaf, nhf, "Amplitude Spectrum hwf"+" nhf = "+str(nhf)+ " khf = "+str(khf), amax=1000)
+  #plotAmplitudeSpectrumT(Sampling(nhg,dt,khg*dt), hwg, -kaf, nhg, "Amplitude Spectrum hwg"+" nhg = "+str(nhg)+ " khg = "+str(khg), amax=1000)
+  #plotAmplitudeSpectrumT(Sampling(natot,dt,0*dt), afag, 0, natot, "Amplitude Spectrum afag"+" naf = "+str(naf)+" nag = "+str(nag)+ " kaf = "+str(kaf)+"kag = "+str(kag), amax=1)
+  ka=0
+  #plotAmplitudeSpectrumT(Sampling(na,dt,ka*dt), akg, 0, na, "Amplitude Spectrum akg"+" na = "+str(na)+ " ka = "+str(ka), amax=1)
+  #plotAmplitudeSpectrumT(Sampling(na,dt,ka*dt), akf, 0, na, "Amplitude Spectrum akg"+" na = "+str(na)+ " ka = "+str(ka), amax=1)
+
+
+  ##SimplePlot.asPoints(evs)
+  ##SimplePlot.asPoints(ev0)
+  ##SimplePlot.asPoints(ev1)
+  ##SimplePlot.asPoints(ev2)
+
+#Used to get a quick a look SLG for a given nag (nagi) and kag (kagi).
+def testSLG(nagi,kagi):
+  decayf,decayg = 0.05,0.05
+  freqf,freqg = 0.08,0.08
+  naf,kaf = nagi,kagi # sampling for inverse wavelet A in f
+  nag,kag = nagi,kagi # sampling for inverse wavelet A in g
+  nhf,khf = 181,-90 # sampling for wavelet H in f
+  nhg,khg = 181,-90 # sampling for wavelet H in g
+  mpf = True#is wavelet in f minimum phase?
+  mpg = True#is wavelet in g minimum phase?
+  shift,constwarp,varywarp = False,True,False
+  s = 20
+  r = 2.0 
+  r1,r2 = 1.1,2.0#The first and last warping amounts that will be applied to trace p. 
+                 #A line is used to calculate the warping amount for a particular time.
+  noise = False
+  nrmsf = 0.01
+  nrmsg = 0.01
+
+  nt,ni = 481,2 # number of time samples; number of impulses
+  dt,ft = 0.004,0.000 # used for plotting only
+  tmin,tmax = 0,nt-1
+  sfac = 1.000
+  amax = 5
+  st = Sampling(nt,dt,ft)
+
+  #Creating wavelets 
+  #hkf = getWavelet(freqf,decayf,nhf,khf,mpf) # known wavelet in f
+  #hkg = getWavelet(freqg,decayg,nhg,khg,mpg) # known wavelet in g
+  fmin,fmax = 0.0,min(0.5,0.5*r) # bandpass (lowpass), if stretching
+  p,q = makeImpulses(shift,s,constwarp,r,varywarp,r1,r2,nt,ni)
+  title = "impulsespsqq"
+  na,ka = 3,0
+  a = getSimpleInverseWavelet(freqf,decayf)
+  #f = addWavelet(freqf,decayf,p,mpf)
+  #g = addWavelet(freqg,decayg,q,mpg)
+  ww = WaveletWarpingHAEig()
+  hkf = ww.getWaveletH(na,ka,a,nhf,khf)
+  hkg = ww.getWaveletH(na,ka,a,nhg,khg)
+  f = ww.applyH(nhf,khf,hkf,p)
+  g = ww.applyH(nhf,khf,hkg,q)
+  if noise:
+    f = addNoise(nrmsf,42,f)
+    g = addNoise(nrmsg,42,g)
+  u = calcPSTime(shift,s,constwarp,r,varywarp,r1,r2,nt)
+  
+  #main piece of wavelet estimation code
+  ww.setFrequencyRange(fmin,fmax)
+  ww.setTimeRange(tmin,tmax)
+
+  #Why does the frequency content of the inverse change?
+  #We are modifying the trace to be warped by applying an antialiasing filter
+  # and squeezing it.
+  nag = nagi
+  kag = kagi
+  lagj = kag
+  for i in range(0,nag):
+    dgj = WaveletWarpingHAEig.tempdelay(lagj,g)
+    ldgj = ww.applyL(u,dgj)
+    sldgj = ww.applyS(u,ldgj)
+    #plotAmplitudeSpectrumT(Sampling(nt,dt,ft*dt), g, 150, 250, "Amplitude Spectrum g"+" nag = "+str(nag)+ " lagj = "+str(lagj), amax=25)
+    #plotAmplitudeSpectrumT(Sampling(nt,dt,ft*dt), dgj, 150, 250, "Amplitude Spectrum dgj"+" nag = "+str(nag)+ " lagj = "+str(lagj), amax=25)
+    #plotAmplitudeSpectrumT(Sampling(nt,dt,ft*dt), ldgj, 150, 250, "Amplitude Spectrum ldgi"+" nag = "+str(nag)+ " lagj = "+str(lagj), amax=25)
+    #plotAmplitudeSpectrumT(Sampling(nt,dt,ft*dt), sldgj, 75, 125, "Amplitude Spectrum sldgi"+" nag = "+str(nag)+ " lagj = "+str(lagj), amax=25)
+    title = "na = "+str(na)+" ka = "+str(ka)
+    plotSequences(st,[g,dgj,ldgj,sldgj],amax=4,labels=["g","dgj","ldgj","sldgj"],title=title)
+    lagj = lagj+1
+  """
+  naf = 3 
+  kaf = 0 
+  lagi = kaf
+  for i in range(0,naf):
+    dgi = WaveletWarpingHAEig.tempdelay(lagi,g)
+    ldgi = ww.applyL(u,dgi)
+    sldgi = ww.applyS(u,ldgi)
+    #plotAmplitudeSpectrumT(Sampling(nt,dt,ft*dt), sldgi, 0, nt, "Amplitude Spectrum sldgi"+" naf = "+str(naf)+ " lagi = "+str(lagi), amax=1.5)
+    SimplePlot.asPoints(sldgi)
+
+    lagi = lagi+1
+    """
+
+
+#assume that naf and kaf are the same as nag and kag.
+def goFreqPlot(decayf, freqf, mpf, naf1, naf2, kaf1, kaf2, nhf, khf,
+                 decayg, freqg, mpg,
+                 shift, s, constwarp, r, varywarp, r1, r2, noise, nrmsf, nrmsg):
+  #Estimation and sampling parameters.
+  nt,ni = 481,2 # number of time samples; number of impulses
+  dt,ft = 0.004,0.000 # used for plotting only
+  tmin,tmax = 0,nt-1
+  sfac = 1.000
+  amax = 5
+  st = Sampling(nt,dt,ft)
+
+  #Creating wavelets 
+  #hkf = getWavelet(freqf,decayf,nhf,khf,mpf) # known wavelet in f
+  #hkg = getWavelet(freqg,decayg,nhg,khg,mpg) # known wavelet in g
+  fmin,fmax = 0.0,min(0.5,0.5*r) # bandpass (lowpass), if stretching
+  p,q = makeImpulses(shift,s,constwarp,r,varywarp,r1,r2,nt,ni)
+  title = "impulsespsqq"
+  na,ka = 3,0
+  a = getSimpleInverseWavelet(freqf,decayf)
+  #f = addWavelet(freqf,decayf,p,mpf)
+  #g = addWavelet(freqg,decayg,q,mpg)
+  ww = WaveletWarpingHAEig()
+  hkf = ww.getWaveletH(na,ka,a,nhf,khf)
+  hkg = ww.getWaveletH(na,ka,a,nhg,khg)
+  f = ww.applyH(nhf,khf,hkf,p)
+  g = ww.applyH(nhf,khf,hkg,q)
+  if noise:
+    f = addNoise(nrmsf,42,f)
+    g = addNoise(nrmsg,42,g)
+  u = calcPSTime(shift,s,constwarp,r,varywarp,r1,r2,nt)
+  
+  ww.setFrequencyRange(fmin,fmax)
+  ww.setTimeRange(tmin,tmax)
+
+  akf = a#ww.getWaveletH(nhf,khf,hkf,naf,kaf) # known inverse wavelet in f
+  akg = a#ww.getWaveletH(nhg,khg,hkg,nag,kag) # known inverse wavelet in g
+
+  #main piece of wavelet estimation code
+  naftot = naf2+1-naf1
+  kaftot = kaf2+1-kaf1
+  awfs = zerofloats
+  for naf in range(naf1,naf2+1):
+    for kaf in range(kaf1,kaf2+1):
+      nag = naf
+      kag = kaf
+      afag = ww.getInverseAfAg(naf,kaf,nag,kag,u,f,g)
+      awf,awg = separateafag(naf,nag,afag)
+      #Frequency sampling
+
+      nfft = FftReal.nfftSmall(4*nt)#more time sample, the finer freq. samples
+      nf = nfft/2+1
+      df = 1.0/(nfft*dt)
+      ff = 0.0
+      fs = Sampling(nf,df,ff)
+      amp = computeAmplitudeSpectrum(subst,fs,nfft,subp)
+
+
+
+  
+
+
+def normalize(h):
+  #return div(h,max(max(h),-min(h)))
+  return div(h,rms(h))
+
+def rms(h):
+  return sqrt(sum(mul(h,h))/len(h))
+
+
+def makeImpulses(shift,s,constwarp,r,varywarp,r1,r2,nt,ni):
+  p = zerofloat(nt)
+  q = zerofloat(nt)
+  tmax = nt-1
+  if shift:
+    ts = rampfloat(tmax/6,(tmax-2*tmax/3)*(ni-1),ni)
+    si = SincInterp.fromErrorAndFrequency(0.01,0.45)
+    rj = -1.0
+    for ji in range(ni):
+      tp = ts[ji]
+      tq = tp+s
+      rj = -rj
+      si.accumulate(tp,rj,nt,1.0,0.0,p)
+      si.accumulate(tq,rj,nt,1.0,0.0,q)
+
+  elif constwarp:
+    if r<=1.0:
+      ts = rampfloat(tmax/(ni+1),tmax/(ni+1),ni)
+    else:
+      ts = rampfloat(tmax/(ni+1)/r,tmax/(ni+1)/r,ni)
+    si = SincInterp.fromErrorAndFrequency(0.01,0.45)
+    rj = -1.0
+    for ji in range(ni):
+      tp = ts[ji]
+      tq = r*tp
+      if r<=1.0:
+        tq += (1.0-r)*tmax
+      #print "tp =",tp," tq =",tq
+      rj = -rj
+      si.accumulate(tp,rj,nt,1.0,0.0,p)
+      si.accumulate(tq,rj,nt,1.0,0.0,q)
+      
+  elif varywarp:
+    ts = rampfloat(tmax/6,(tmax-2*tmax/3)*(ni-1),ni)
+    si = SincInterp.fromErrorAndFrequency(0.01,0.45)
+    rj = -1.0
+    for ji in range(ni):
+      tp = ts[ji]
+      slope = (r2-r1)/(nt-1)
+      r = slope*tp+r1
+      print "*********************************************************************"
+      print "r = "+str(r)
+      print "max-min = "+str(r2-r1)
+      print "nt-1 = "+str(nt-1)
+      print "slope = "+str(slope)
+      print "tq = "+str(tp*r)
+
+      tq = tp*r
+      rj = -rj
+      si.accumulate(tp,rj,nt,1.0,0.0,p)
+      si.accumulate(tq,rj,nt,1.0,0.0,q)
+  return p,q
+
+def addWavelet(fpeak,decay,p,mp=False):
+  w = 2.0*PI*fpeak
+  print "w = "+str(w)
+  if not mp:#mp is minimum phase
+    decay *= 2.0
+    print "decay = "+str(decay)
+    w -= 2.0*PI*0.04
+    print "w= "+str(w)
+  r = exp(-decay)
+  print "r= "+str(r)
+  a1,a2 = -2.0*r*cos(w),r*r
+  print "a =",[1,a1,a2]
+  poles = [Cdouble.polar(r,w),Cdouble.polar(r,-w)]
+  print "pole1 = "+poles[0].toString()
+  print "pole2 = "+poles[1].toString()
+  zeros = []
+  print "zero1 = "+zeros[0].toString()
+  gain = 1.0
+  x = copy(p)
+  t = copy(p)
+  rcf = RecursiveCascadeFilter(poles,zeros,gain)
+  rcf.applyForward(p,t)
+  if not mp:
+    w = 2.0*PI*(fpeak+0.04)
+    a1r,a2r = -2.0*r*cos(w),r*r
+    print "areverse =",[1,a1r,a2r]
+    print "wreverse= "+str(w)
+    poles = [Cdouble.polar(r,w),Cdouble.polar(r,-w)]
+    print "pole1reverse = "+poles[0].toString()
+    print "pole2reverse = "+poles[1].toString()
+    zeros = []
+    gain = 1.0
+    rcf = RecursiveCascadeFilter(poles,zeros,gain)
+    rcf.applyReverse(t,x)
+  else:
+    copy(t,x)
+  conv(2,0,[1.0,-0.95],len(x),0,copy(x),len(x),0,x) # attenuate DC
+  return x
+
+def getSimpleInverseWavelet(fpeak,decay):
+  w = 2.0*PI*fpeak
+  print "w = "+str(w)
+  r = exp(-decay)
+  print "r= "+str(r)
+  a1,a2 = -2.0*r*cos(w),r*r
+  a = [1,a1,a2]
+  return a
+
+def getWavelet(fpeak,decay,nh,kh,mp=False):
+  x = zerofloat(nh)
+  x[-kh] = 1.0
+  return addWavelet(fpeak,decay,x,mp)
+
+def plotSequence(x,xmax=None,title=None):
+  sp = SimplePlot.asPoints(x)
+  if xmax==None:
+    xmax = max(abs(max(x)),abs(min(x)))
+    xmax *= 1.05
+  sp.setVLimits(-xmax,xmax)
+  if title:
+    sp.setTitle(title)
+
+def plotSequences(st,xs,amax=None,labels=None,title=None):
+  nx = len(xs)
+  pp = PlotPanel(nx,1)
+  for ix,xi in enumerate(xs):
+    pv = pp.addPoints(ix,0,st,xi)
+    if labels:
+      pp.setVLabel(ix,labels[ix])
+    if amax:
+      pp.setVLimits(ix,-amax,amax)
+      pp.setVInterval(ix,2.0)
+  pp.setHLabel("Time (s)")
+  pf = PlotFrame(pp)
+  pf.setVisible(True)
+  if title:
+    pp.setTitle(title)
+
+def plotWavelets(st,hs,hmax=None,title=None,pngDir=None,
+  onecol=None,twocol=None):
+  sp = SimplePlot()
+  ls = [PointsView.Line.SOLID,PointsView.Line.DASH,PointsView.Line.DOT]
+  lw = 1.8,3,1
+  nh = len(hs)
+  hsmax = 0
+  for ih in range(nh):
+    if ih==0:
+      pv = sp.addPoints(st,hs[ih])
+      pv.setLineStyle(PointsView.Line.SOLID)
+      pv.setLineStyle(PointsView.Line.SOLID)
+      pv.setLineColor(Color.BLUE)
+      pv.setMarkStyle(PointsView.Mark.FILLED_CIRCLE)
+      pv.setMarkSize(3.4)
+      hsmax = max(hsmax,abs(max(hs[ih])),abs(min(hs[ih])))
+    elif hs[ih]:
+      pv = sp.addPoints(st,hs[ih])
+      pv.setLineStyle(PointsView.Line.SOLID)
+      pv.setLineColor(Color.RED)
+      pv.setLineWidth(1)
+      hsmax = max(hsmax,abs(max(hs[ih])),abs(min(hs[ih])))
+  if hmax==None:
+    hmax = hsmax*1.05
+  sp.setVLimits(-hmax,hmax)
+  sp.setHLabel("Time (s)")
+  sp.setVLabel("Amplitude (normalized)")
+  sp.setSize(720,400)
+  if title:
+    if pngDir==None:
+      sp.setTitle(title)
+  if pngDir:
+    if onecol:
+      sp.setFontSizeForPrint(8.0,222.0)
+      pngDir = pngDir+title+"onecol.png"
+      sp.paintToPng(720.0,3.08,pngDir)
+    if twocol:
+      sp.setFontSizeForPrint(8.0,469.0)
+      pngDir = pngDir+title+"twocol.png"
+      sp.paintToPng(720.0,6.51,pngDir)
+
+
+
+def plot2TracesSideBySide(st, f, g, tmin, tmax, 
+  amax, title=None, pngDir=None, onecol=None, twocol=None):
+  pv1 = PointsView(st,f)
+  pv1.setOrientation(PointsView.Orientation.X1DOWN_X2RIGHT)
+  pv2 = PointsView(st,g)
+  pv2.setOrientation(PointsView.Orientation.X1DOWN_X2RIGHT)
+  
+  pp = PlotPanel(1,2,PlotPanel.Orientation.X1DOWN_X2RIGHT,
+  PlotPanel.AxesPlacement.LEFT_TOP)
+  pp.addTiledView(0,0,pv1)
+  pp.addTiledView(0,1,pv2)
+  pp.setHLimits(0,-amax,amax)
+  pp.setHLimits(1,-amax,amax)
+  pp.setHInterval(0,2.0)
+  pp.setHInterval(1,2.0)
+  pp.setVLimits(tmin,tmax)
+  pp.setHLabel(0,"Amplitude")
+  pp.setHLabel(1,"Amplitude")
+  pp.setVLabel("Time (s)")
+  pf = PlotFrame(pp)
+  if title:
+    if pngDir==None:
+      pp.setTitle(title)
+  if pngDir:
+    if onecol:
+      pf.setFontSizeForPrint(8.0,222.0)
+      pngDir = pngDir+title+"onecol.png"
+      pf.paintToPng(720.0,3.08,pngDir)
+    if twocol:
+      pf.setFontSizeForPrint(8.0,469.0)
+      pngDir = pngDir+title+"twocol.png"
+      pf.paintToPng(720.0,6.51,pngDir)
+  pf.setVisible(True)
+  pf.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+
+def plot3TracesSideBySide(st, f, g, h, tmin, tmax, 
+  amax, title=None, pngDir=None, onecol=None, twocol=None):
+  pv1 = PointsView(st,f)
+  pv1.setOrientation(PointsView.Orientation.X1DOWN_X2RIGHT)
+  pv2 = PointsView(st,g)
+  pv2.setOrientation(PointsView.Orientation.X1DOWN_X2RIGHT)
+  pv3 = PointsView(st,h)
+  pv3.setOrientation(PointsView.Orientation.X1DOWN_X2RIGHT)
+  
+  pp = PlotPanel(1,3,PlotPanel.Orientation.X1DOWN_X2RIGHT,
+  PlotPanel.AxesPlacement.LEFT_TOP)
+  pp.addTiledView(0,0,pv1)
+  pp.addTiledView(0,1,pv2)
+  pp.addTiledView(0,2,pv3)
+  pp.setHLimits(0,-amax,amax)
+  pp.setHLimits(1,-amax,amax)
+  pp.setHLimits(2,-amax,amax)
+  pp.setHInterval(0,2.0)
+  pp.setHInterval(1,2.0)
+  pp.setHInterval(2,2.0)
+  pp.setVLimits(tmin,tmax)
+  pp.setHLabel(0,"Amplitude")
+  pp.setHLabel(1,"Amplitude")
+  pp.setHLabel(2,"Amplitude")
+  pp.setVLabel("Time (s)")
+  pf = PlotFrame(pp)
+  pf.setSize(720,400)
+  if title:
+    if pngDir==None:
+      pp.setTitle(title)
+  if pngDir:
+    if onecol:
+      pf.setFontSizeForPrint(8.0,222.0)
+      pngDir = pngDir+title+"onecol.png"
+      pf.paintToPng(720.0,3.08,pngDir)
+    if twocol:
+      pf.setFontSizeForPrint(8.0,469.0)
+      pngDir = pngDir+title+"twocol.png"
+      pf.paintToPng(720.0,6.51,pngDir)
+  pf.setVisible(True)
+  pf.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+
+#Calculates the PS time that corresponds to the PP time.
+def calcPSTime(shift, s, constwarp, r, varywarp, r1, r2, nt):
+  if shift:
+    u = rampfloat(0.0,1,nt) 
+    dump(u)
+    u = add(u,s)
+    print "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU"
+    dump(u)
+  elif constwarp:
+    u = rampfloat(0.0,r,nt)#PS time as a function of PP time
+    if r<=1.0:
+      u = add((1.0-r)*(nt-1),u)
+      #u is used in warp, which is an interpolator. In the case of
+      #r<=1, if this 
+      #if statement block was not here, the values to interpolate at (u)
+      #would not include the wavelets.
+  elif varywarp:
+    u = zerofloat(nt)
+    slope = (r2-r1)/(nt-1)
+    for i in range(0,nt):
+      r = slope*i+r1
+      u[i] = i*r
+
+  return u
+
+
+def getTitle(shift, s, constwarp, r, varywarp, r1, r2):
+  if shift:
+    title = "shift s = "+str(s)
+  elif constwarp:
+    title = "constant warp r = "+str(r)
+  elif varywarp:
+    title = "varying warp r2 = "+str(r2)+" r1 = "+str(r1)
+  print title
+  return title
+
+  return u
+def addNoise(nrms, seed, f):
+  n = len(f)
+  r = Random(seed)
+  nrms *= max(abs(f))
+  g = mul(2.0,sub(randfloat(r,n),0.5))
+  rgf = RecursiveGaussianFilter(1.0)
+  rgf.apply1(g,g)
+  frms = sqrt(sum(mul(f,f))/n)
+  grms = sqrt(sum(mul(g,g))/n)
+  g = mul(g,nrms*frms/grms)
+  return add(f,g)
+
+def separateafag(naf,nag,afag):
+  na = naf+nag
+  af = zerofloat(naf)
+  ag = zerofloat(nag)
+  for i in range(0,naf):
+    af[i] = afag[i]
+  ii=0
+  for i in range(naf,na):
+    ag[ii] = afag[i]
+    ii = ii + 1
+  return af,ag
+
+#Plot amplitude spectrum for a single trace
+def plotAmplitudeSpectrumT(st, p, itmin, itmax, title, amax=None):
+  #Time sampling for the time window specified.
+  nt = itmax-itmin
+  dt = st.getDelta()
+  ft = st.getValue(itmin)
+
+  subp = zerofloat(nt)
+  subst = Sampling(nt,dt,ft)
+  for it in range(0,nt):
+    subp[it] = p[itmin+it]
+
+  #Frequency sampling
+  nfft = FftReal.nfftSmall(4*nt)#more time sample, the finer freq. samples
+  nf = nfft/2+1
+  df = 1.0/(nfft*dt)
+  ff = 0.0
+  fs = Sampling(nf,df,ff)
+  amp = computeAmplitudeSpectrum(subst,fs,nfft,subp)
+  plotSpectrum(fs,amp,title,amax=amax)
+
+#Plot amplitude spectrum for a gather trace
+def plotAmplitudeSpectrumG(st, p, ixmin, ixmax, itmin, itmax, nnfft, title):
+  #Time sampling for the time window specified.
+  nt = ithi-itlo
+  dt = st.getDelta()
+  ft = st.getValue(itmin)
+
+  nx = ixmax-ixmin
+
+  subp = zerofloat(nt,nx)
+  subst = Sampling(nt,dt,ft)
+  for ix in range(0,nx):
+    for it in range(0,nt):
+      subp[ix][it] = p[ix][itmin+it]
+
+  #Frequency sampling
+  nfft = FftReal.nfftSmall(2*nt)#more time sample, the finer freq. samples
+  nf = nfft/2+1
+  df = 1.0/(nfft*dt)
+  ff = 0.0
+  fs = Sampling(nf,df,ff)
+  ampSum = zerofloat(nf)
+  for ix in range(0,nx):
+    amp = computeAmplitudeSpectrum(subst,fs,nfft,p)
+    ampSum = add(ampSum,amp)
+  ampMean = div(ampSum,nx)
+  plotSpectrum(fs,ampMean,title)
+
+def computeAmplitudeSpectrum(st, fs, nfft, p):
+  nt = st.getCount()
+  dt = st.getDelta()
+  ft = st.getFirst()
+  nf = fs.getCount()
+  df = fs.getDelta()
+  ff = fs.getFirst()
+
+  # Real-to-complex fast Fourier transform.
+  fft = FftReal(nfft)
+  cf = zerofloat(2*nf)
+  copy(nt,p,cf)
+  fft.realToComplex(-1,cf,cf)
+
+  #Adjust phase for possibly non-zero time of first sample.
+  wft = rampfloat(0.0,-2.0*FLT_PI*df*ft,nf);
+  cf = cmul(cf,cmplx(cos(wft),sin(wft)));
+
+  af = cabs(cf);
+  #Amplitude spectrum normalized
+  #float amax = max(max(af),FLT_EPSILON);
+  #af = mul(1.0f/amax,af);
+  return af;
+
+def computeAmplitudeSpectrum(st, fs, p):
+
+  #Frequency sampling
+  nfft = FftReal.nfftSmall(2*nt)#more time sample, the finer freq. samples
+  nf = nfft/2+1
+  df = 1.0/(nfft*dt)
+  ff = 0.0
+  fs = Sampling(nf,df,ff)
+
+  nt = st.getCount()
+  dt = st.getDelta()
+  ft = st.getFirst()
+  nf = fs.getCount()
+  df = fs.getDelta()
+  ff = fs.getFirst()
+
+  # Real-to-complex fast Fourier transform.
+  fft = FftReal(nfft)
+  cf = zerofloat(2*nf)
+  copy(nt,p,cf)
+  fft.realToComplex(-1,cf,cf)
+
+  #Adjust phase for possibly non-zero time of first sample.
+  wft = rampfloat(0.0,-2.0*FLT_PI*df*ft,nf);
+  cf = cmul(cf,cmplx(cos(wft),sin(wft)));
+
+  af = cabs(cf);
+  #Amplitude spectrum normalized
+  #float amax = max(max(af),FLT_EPSILON);
+  #af = mul(1.0f/amax,af);
+  return af;
+
+
+def plotSpectrum(sf,spec,title,amax=None):
+  sp = SimplePlot(SimplePlot.Origin.LOWER_LEFT)
+  sp.setVLabel("Amplitude")
+  sp.setHLabel("Frequency (Hz)")
+  sp.setSize(750,400)
+  sp.addTitle(title)
+  if amax:
+    sp.setVLimits(0,amax)
+  pv = sp.addPoints(sf,spec)
+  temp = mul(spec,0.0)
+  temp = add(temp,0.01673)
+  pv = sp.addPoints(sf,temp)
+  #sp.setVLimits(0,0.054)
+  #sp.setHLimits(19,21)
+  
+
+#############################################################################
+# Do everything on Swing thread.
+
+class RunMain(Runnable):
+  def run(self):
+    main(sys.argv)
+SwingUtilities.invokeLater(RunMain())

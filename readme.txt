@@ -32,7 +32,7 @@ JTK” section in the readme.txt file in the mines jtk.
 ########################################################################################
 
 #########Research#######################################################################
-Inside the wwarp folder, you will find files pertaining to our research.
+Inside the wwarp folder, you will find files pertaining to our research. 
 
 Note, the png and pres14 folders are the destinations for images created for our
 CWP report (png) and our presentation (pres14).

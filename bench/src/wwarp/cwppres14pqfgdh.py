@@ -13,7 +13,9 @@ from java.util import Random
 #pngDir = "./pres14/figures/"
 #pngDir = "./png/figuresAbs/"
 #pngDir = "./pres14/pqfgdh/"
-pngDir = None
+#pngDir = "./pres14/pqfgdh/poster/"
+pngDir = "./pres14/test2/"
+#pngDir = None
 
 def main(args):
   goSimpleTest()
@@ -26,7 +28,7 @@ def goSimpleTest():
   dt,ft = 0.004,0.000 # used for plotting only
   tmin,tmax = 0,nt-1
   sfac = 1.000
-  amax = 5
+  amax = 3
   st = Sampling(nt,dt,ft)
   for mp in [False]: # True, for minimum-phase; False for other
     hk = getWavelet(freq,decay,nh,kh,mp) # known wavelet
@@ -56,7 +58,7 @@ def goSimpleTest():
       ak = ww.getWaveletH(nh,kh,hk,na,ka) # known inverse wavelet
       aw = ww.getInverseA(na,ka,u,f,g) # estimated inverse wavelet
 
-      ag = ww.applyA(na,ka,ak,g)
+      ag = ww.applyA(na,ka,aw,g)
       lag = ww.applyL(u,ag) # lowpass, if squeezing
       slag = ww.applyS(u,lag)
 
@@ -78,34 +80,34 @@ def goSimpleTest():
       nak = normalize(ak)
 
       title="pq"
-      plot2TracesSideBySide(st,p,q,tmin*dt,tmax*dt,5,0.90,0.80,16.0/9.0,
+      plot2TracesSideBySide(st,p,q,tmin*dt,tmax*dt,3,0.90,0.80,16.0/9.0,
       title=title,pngDir=pngDir,twocol=True)
       title="pSLq"
-      plot2TracesSideBySide(st,p,slq,tmin*dt,tmax*dt,5,0.90,0.80,16.0/9.0,
+      plot2TracesSideBySide(st,p,slq,tmin*dt,tmax*dt,3,0.90,0.80,16.0/9.0,
       title=title,pngDir=pngDir,twocol=True)
       title="fg"
-      plot2TracesSideBySide(st,f,g,tmin*dt,tmax*dt,5,0.90,0.80,16.0/9.0,
+      plot2TracesSideBySide(st,f,g,tmin*dt,tmax*dt,3,0.90,0.80,16.0/9.0,
       title=title,pngDir=pngDir,twocol=True)
       title="fSg"
-      plot2TracesSideBySide(st,f,slg,tmin*dt,tmax*dt,5,0.90,0.80,16.0/9.0,
+      plot2TracesSideBySide(st,f,slg,tmin*dt,tmax*dt,3,0.90,0.80,16.0/9.0,
       title=title,pngDir=pngDir,twocol=True)
       title="fSgdiv2"
-      plot2TracesSideBySide(st,f,slgdiv2,tmin*dt,tmax*dt,5,0.90,0.80,16.0/9.0,
+      plot2TracesSideBySide(st,f,slgdiv2,tmin*dt,tmax*dt,3,0.90,0.80,16.0/9.0,
       title=title,pngDir=pngDir,twocol=True)
       title="fAg"
-      plot2TracesSideBySide(st,f,ag,tmin*dt,tmax*dt,5,0.90,0.80,16.0/9.0,
+      plot2TracesSideBySide(st,f,ag,tmin*dt,tmax*dt,3,0.90,0.80,16.0/9.0,
       title=title,pngDir=pngDir,twocol=True)
       title="fSLAg"
-      plot2TracesSideBySide(st,f,slag,tmin*dt,tmax*dt,5,0.90,0.80,16.0/9.0,
+      plot2TracesSideBySide(st,f,slag,tmin*dt,tmax*dt,3,0.90,0.80,16.0/9.0,
       title=title,pngDir=pngDir,twocol=True)
       title="SLAgASLg"
-      plot2TracesSideBySide(st,f,aslg,tmin*dt,tmax*dt,5,0.90,0.80,16.0/9.0,
+      plot2TracesSideBySide(st,f,aslg,tmin*dt,tmax*dt,3,0.90,0.80,16.0/9.0,
       title=title,pngDir=pngDir,twocol=True)
       title="fHSLAg"
-      plot2TracesSideBySide(st,f,hslag,tmin*dt,tmax*dt,5,0.90,0.80,16.0/9.0,
+      plot2TracesSideBySide(st,f,hslag,tmin*dt,tmax*dt,3,0.90,0.80,16.0/9.0,
       title=title,pngDir=pngDir,twocol=True)
       title="3d"
-      plot3TracesSideBySide(st,d[0],d[1],d[2],tmin*dt,tmax*dt,5,0.90,0.80,16.0/9.0,
+      plot3TracesSideBySide(st,d[0],d[1],d[2],tmin*dt,tmax*dt,3,0.90,0.80,16.0/9.0,
       title=title,pngDir=pngDir,twocol=True)
       title="0dud"
       plot1Trace(st,d[0],tmin*dt,250*dt,6,0.90,0.80,16.0/9.0,
@@ -259,7 +261,8 @@ def plotWavelets(st,hs,fracWidth,fracHeight,aspectRatio,hmax=None,title=None,png
     if twocol:
       sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
       pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"twocol.png"
-      sp.paintToPng(720.0,3.0,pngDir)
+      #sp.paintToPng(720.0,3.0,pngDir)
+      sp.paintToPng(720.0,14.0,pngDir)
 
 def plotWavelet(st,h,fracWidth,fracHeight,aspectRatio,hmax=None,title=None,pngDir=None,
   onecol=None,twocol=None):
@@ -354,7 +357,8 @@ def plot2TracesSideBySide(st, f, g, tmin, tmax,
       print "zz = "+str(aspectRatio)
       pf.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
       pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"twocol.png"
-      pf.paintToPng(720.0,3.0,pngDir)
+      #pf.paintToPng(720.0,3.0,pngDir)
+      pf.paintToPng(720.0,14.0,pngDir)
   pf.setVisible(True)
   pf.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
 

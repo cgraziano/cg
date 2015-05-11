@@ -13,9 +13,9 @@ from wwarp import WaveletWarpingHA
 #############################################################################
 
 #pngDir = "./png/figures/"
-pngDir = "./png/figuresAbs/"
+#pngDir = "./png/figuresAbs/"
 #pngDir = "./png/200iterationsh1/"
-#pngDir = None
+pngDir = None
 
 def main(args):
   #goSimpleTest()
@@ -32,7 +32,7 @@ def goSino():
   ntg = 852
   stg = Sampling(ntg,dt,ft) # sampling of the PS image
   sx = Sampling(nx,dx,fx) # spatial sampling for both the PP and PS images
-  itmin,itmax = 100,400 # PP time window
+  itmin,itmax = 100,500 # PP time window
   sfac = 1.000 # stabilization factor
   wha = 0.000 # weight for HA = I terms
   f,g,u = getSinoImages() # PP image, PS image, and warping u(t,x)
@@ -43,6 +43,9 @@ def goSino():
   for ix in range(0,nx):
     for it in range(1,ntwin):
       uprime[ix][it] = u[ix][it]-u[ix][it-1]
+  SimplePlot.asPixels(u)
+  SimplePlot.asPoints(u[50])
+  SimplePlot.asPoints(uprime[50])
   sp = SimplePlot(SimplePlot.Origin.UPPER_LEFT)
   pv = sp.addPixels(uprime)
   pv.setClips(1.4,1.72)
@@ -66,7 +69,7 @@ def goSino():
       print "niter =",niter," wha =",wha
       suffix = str(niter)+str(int(wha))
       ww.setWeightHA(wha)
-      #"""
+      
       ag = zerofloat(na); ag[-ka] = 1.0 # initial inverse a in g
       #ag = mul(ag,10)
       hf = ww.getWaveletH(nh,kh,na,ka,ag,u,f,g) # wavelet h in f

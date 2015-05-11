@@ -58,6 +58,59 @@ public class WaveletWarpingHA {
     _sfac = sfac;
   }
 
+  public void setMaxPercentChange(float minRmsPercentChange) {
+    _minRmsPercentChange = minRmsPercentChange;
+  }
+
+  public float[] getAllResRmsAllS() {
+    return _allResRmsAllS;
+  }
+
+  public int getLastIter() {
+    return _lastIter;
+  }
+
+  public float[][] getWaveletHInverseA(
+    int na, int ka, float[] aGuess, 
+    int nh, int kh, float[] hGuess,
+    float[][] u, float[][] f, float[][] g, int niter) 
+  {
+    _allResRmsAllS = new float[niter];
+    float allResRmsInit = 0.0f;
+    float allResRmsFina = 0.0f;
+    float rmsPercentChange = 0.0f;
+    float[] a = copy(aGuess);
+    float[] h = copy(hGuess);
+    for (int iter=0; iter<niter; ++iter) {
+      allResRmsInit = rms(computeDataResidual(nh,kh,h,na,ka,a,u,f,g)); 
+      
+      //Solve for a and h
+      a = getInverseA(na,ka,nh,kh,h,u,f,g);
+      h = getWaveletH(nh,kh,na,ka,a,u,f,g);
+
+      allResRmsFina = rms(computeDataResidual(nh,kh,h,na,ka,a,u,f,g)); 
+      rmsPercentChange = percentChange(allResRmsFina,allResRmsInit);
+      _lastIter = iter;
+
+      if (iter == 0)
+        _allResRmsAllS[0] = allResRmsInit;
+      else
+        _allResRmsAllS[iter] = allResRmsInit;
+      _allResRmsAllS[iter] = allResRmsInit;
+      _allResRmsAllS[iter+1] = allResRmsFina;
+      trace("iter = "+iter);
+      trace("allResRmsInit = "+allResRmsInit);
+      trace("allResRmsFina = "+allResRmsFina);
+      trace("rmsPercentChange = "+rmsPercentChange);
+      if (abs(rmsPercentChange)<_minRmsPercentChange) {
+        return new float[][]{h,a};
+      }
+
+    }
+    return new float[][]{h,a};
+  }
+
+
   /**
    * Returns inverse wavelet a estimated by warping one sequence to another.
    * The sequences are related by warping such that f[t] ~ g[u[t]].
@@ -82,11 +135,11 @@ public class WaveletWarpingHA {
 
     // Matrix P = HSLG.
     float[][] p = new float[na][];
+    Warper warp = new Warper();
     for (int ia=0,lag=ka; ia<na; ++ia,++lag) {
       float[] dg = delay(lag,g);
-      float[] ldg = applyL(u,dg);
-      float[] sldg = applyS(u,ldg);
-      p[ia] = applyH(nh,kh,h,sldg);
+      float[] sdg = warp.applyS(u,dg);
+      p[ia] = applyH(nh,kh,h,sdg);
     }
 
     // Auto-correlation H'H and cross-correlation H'delta.
@@ -137,66 +190,11 @@ public class WaveletWarpingHA {
     Check.argument(ka<=0,"ka<=0");
 
     // Matrix P = HSLG.
+    Warper warp = new Warper();
     float[][][] p = new float[na][][];
     for (int ia=0,lag=ka; ia<na; ++ia,++lag) {
       float[][] dg = delay(lag,g);
-      float[][] ldg = applyL(u,dg);
-      float[][] sldg = applyS(u,ldg);
-      p[ia] = applyH(nh,kh,h,sldg);
-    }
-
-    // Auto-correlation H'H and cross-correlation H'delta.
-    float[] one = {1.0f};
-    float[] ch1 = new float[na];
-    float[] chh = new float[na];
-    xcor(nh,kh,h,1,0,one,na,ka,ch1);
-    xcor(nh,kh,h,nh,kh,h,na, 0,chh);
-
-    // Weight applied to HA = I term.
-    double wrms = _wha*rms(f);
-    double w = wrms*wrms;
-
-    // Matrix C = P'P+wH'H and vector b = P'f+wH'delta.
-    DMatrix c = new DMatrix(na,na);
-    DMatrix b = new DMatrix(na,1);
-    for (int ia=0; ia<na; ++ia) {
-      for (int ja=0; ja<na; ++ja) {
-        double cij = dot(p[ia],p[ja])+w*chh[abs(ia-ja)];
-        c.set(ia,ja,cij);
-      }
-      c.set(ia,ia,c.get(ia,ia)*_sfac);
-      double bi = dot(p[ia],f)+w*ch1[ia];
-      b.set(ia,0,bi);
-    }
-    //System.out.println("c=\n"+c);
-    //System.out.println("b=\n"+b);
-
-    // Solve for inverse filter a using Cholesky decomposition of C.
-    // Normalize a such that max(abs(a)) = 1.
-    DMatrixChd chd = new DMatrixChd(c);
-    DMatrix a = chd.solve(b);
-    float[] aa = new float[na];
-    float amax = 0.0f;
-    for (int ia=0; ia<na; ++ia) {
-      aa[ia] = (float)a.get(ia,0);
-      amax = max(amax,abs(aa[ia]));
-    }
-    return aa;
-    //return mul(aa,1.0f/amax);
-  }
-  public float[] getInverseAShifts(
-    int na, int ka, int nh, int kh, float[] h, 
-    float[] u, float[] f, float[] g)
-  {
-    int nt = u.length;
-    Check.argument(-na<ka,"-na<ka");
-    Check.argument(ka<=0,"ka<=0");
-
-    // Matrix P = HSLG.
-    float[][] p = new float[na][];
-    for (int ia=0,lag=ka; ia<na; ++ia,++lag) {
-      float[] dg = delay(lag,g);
-      float[] sdg = applyS(u,dg);
+      float[][] sdg = warp.applyS(u,dg);
       p[ia] = applyH(nh,kh,h,sdg);
     }
 
@@ -227,7 +225,9 @@ public class WaveletWarpingHA {
     //System.out.println("b=\n"+b);
 
     // Solve for inverse filter a using Cholesky decomposition of C.
-    // Normalize a such that rms(a) = 1.
+    // Normalize a such that max(abs(a)) = 1.
+    System.out.println(c.toString());
+    System.out.println(b.toString());
     DMatrixChd chd = new DMatrixChd(c);
     DMatrix a = chd.solve(b);
     float[] aa = new float[na];
@@ -239,7 +239,6 @@ public class WaveletWarpingHA {
     return aa;
     //return mul(aa,1.0f/amax);
   }
-
 
   /**
    * Estimates the wavelet h from the inverse wavelet a.
@@ -266,9 +265,9 @@ public class WaveletWarpingHA {
     int nt = u.length;
 
     // Sequence q = SLAg.
+    Warper warp = new Warper();
     float[] ag = applyA(na,ka,a,g);
-    float[] lag = applyL(u,ag);
-    float[] q = applyS(u,lag);
+    float[] q = warp.applyS(u,ag);
 
     // Autocorrelation Q'Q and crosscorrelation Q'f.
     float[] cqf = new float[nh];
@@ -320,9 +319,9 @@ public class WaveletWarpingHA {
     float w = wrms*wrms;
 
     // Sequence q = SLAg.
+    Warper warp = new Warper();
     float[][] ag = applyA(na,ka,a,g);
-    float[][] lag = applyL(u,ag);
-    float[][] q = applyS(u,lag);
+    float[][] q = warp.applyS(u,ag);
 
     // Autocorrelation Q'Q and crosscorrelation Q'f.
     float[] cqf = new float[nh];
@@ -395,6 +394,27 @@ public class WaveletWarpingHA {
   }
 
   /**
+   * Returns the rms value of the image/trace.
+   */
+  public float rms(float[] x) {
+    int nt = _itmax-_itmin+1;
+    return (float)sqrt(dot(x,x)/nt);
+  }
+  public float rms(float[][] x) {
+    int nt = _itmax-_itmin+1;
+    return (float)sqrt(dot(x,x)/(nt*x.length));
+  }
+  public float rms(int itmin, int itmax, float[] x) {
+    int nt = itmax-itmin+1;
+    return (float)sqrt(dot(itmin,itmax,x,x)/nt);
+  }
+  public float rms(int itmin, int itmax, float[][] x) {
+    int nt = itmax-itmin+1;
+    return (float)sqrt(dot(itmin,itmax,x,x)/(nt*x.length));
+  }
+
+
+  /**
    * Applies the specified inverse wavelet A.
    * @param na number of samples in the inverse wavelet a.
    * @param ka the sample index for a[0].
@@ -452,6 +472,93 @@ public class WaveletWarpingHA {
   public float[][] applyS(float[][] u, float[][] f) {
     return warp(u,f);
   }
+
+  /**
+   * Estimates that shaping filter that will shape SBg to f.
+   * @param nc number of samples in wavelet c.
+   * @param kc the sample index for a[0].
+   * @param nb number of samples in the wavelet h.
+   * @param kb the sample index for h[0].
+   * @param b array of coefficients for the inverse wavelet a.
+   * @param u relates PP time to PS time (in samples).
+   * @param f the PP trace.
+   * @param g the PS trace.
+   */
+  public float[] getWaveletC(
+    int nc, int kc, int nb, int kb, float[] b, float stabFact,
+    float[] u, float[] f, float[] g)
+  {
+    int nt = u.length;
+    Warper warp = new Warper();
+
+    // Sequence q = SBg.
+    float[] bg = applyH(nb,kb,b,g);
+    float[] q0 = warp.applyS(u,bg);
+
+    //Q'Q
+    DMatrix qq = new DMatrix(nc,nc);
+    for (int ic=0,lagi=kc; ic<nc; ++ic,++lagi) {
+      float[] qi = delay(lagi,q0);
+      for (int jc=0,lagj=kc; jc<nc; ++jc,++lagj) {
+        float[] qj = delay(lagj,q0);
+        double qiqj = dot(qi,qj);
+        qq.set(ic,jc,qiqj);
+        if (ic==jc)
+          qq.set(ic,jc,((1.0+(double) stabFact)*qq.get(ic,jc)));
+      }
+    }
+    //trace(qq.toString());
+    //Q'f
+    DMatrix qf = new DMatrix(nc,1);
+    for (int ic=0,lagi=kc; ic<nc; ++ic,++lagi) {
+      float[] qi = delay(lagi,q0);
+      double qif = dot(qi,f);
+      qf.set(ic,0,qif);
+    }
+
+    // Solve for wavelet C.
+    DMatrixChd chd = new DMatrixChd(qq);
+    DMatrix h = chd.solve(qf);
+    return convertDToF(h.getArray());
+  }
+  public float[] getWaveletC(
+    int nc, int kc, int nb, int kb, float[] b, float stabFact,
+    float[][] u, float[][] f, float[][] g)
+  {
+    int nt = u[0].length;
+    Warper warp = new Warper();
+
+    // Sequence q = SBg.
+    float[][] bg = applyH(nb,kb,b,g);
+    float[][] q0 = warp.applyS(u,bg);
+
+    //Q'Q
+    DMatrix qq = new DMatrix(nc,nc);
+    for (int ic=0,lagi=kc; ic<nc; ++ic,++lagi) {
+      float[][] qi = delay(lagi,q0);
+      for (int jc=0,lagj=kc; jc<nc; ++jc,++lagj) {
+        float[][] qj = delay(lagj,q0);
+        double qiqj = dot(qi,qj);
+        qq.set(ic,jc,qiqj);
+        if (ic==jc)
+          qq.set(ic,jc,((1.0+(double) stabFact)*qq.get(ic,jc)));
+      }
+    }
+    
+    //Q'f
+    DMatrix qf = new DMatrix(nc,1);
+    for (int ic=0,lagi=kc; ic<nc; ++ic,++lagi) {
+      float[][] qi = delay(lagi,q0);
+      double qif = dot(qi,f);
+      qf.set(ic,0,qif);
+    }
+
+    // Solve for wavelet C.
+    DMatrixChd chd = new DMatrixChd(qq);
+    DMatrix h = chd.solve(qf);
+    return convertDToF(h.getArray());
+  }
+
 
   /**
    * Applies the composite linear operator HSLA.
@@ -518,31 +625,39 @@ public class WaveletWarpingHA {
     }
     return p;
   }
+
   /**
-   * Returns the rms value of the image/trace.
+   * Makes the rms equal to 1 within a specified time range.
    */
-  public float rms(float[] x) {
-    return (float)sqrt(dot(x,x)/x.length);
-  }
-  public float rms(float[][] x) {
-    return (float)sqrt(dot(x,x)/x.length/x[0].length);
-  }
-  /**
-   * Returns the rms value of the image specified between 
-   * the two time indices.
-   */
-  public float rms(int itmin, int itmax, float[][] x) {
-    int nt = itmax-itmin+1;
-    return (float)sqrt(dot(itmin,itmax,x,x)/x.length/nt);
-  }
-  /**
-   * Returns the rms value of the PS image specified between 
-   * the two time indices 228 and 700.
-   */
-  public float rmsPS(float[][] x) {
-    int nt = 700-228+1;
-    return (float)sqrt(dotPS(x,x)/x.length/nt);
-  }
+   public float[] makeRms1(float[] x) {
+     float rmsx = rms(x);
+     float[] rms1x = div(x,rmsx);
+     //Check
+     trace("rms after normalization is "+rms(rms1x));
+     return rms1x;
+   }
+   public float[][] makeRms1(float[][] x) {
+     float rmsx = rms(x);
+     float[][] rms1x = div(x,rmsx);
+     //Check
+     trace("rms after normalization is "+rms(rms1x));
+     return rms1x;
+   }
+   public float[] makeRms1(int itmin, int itmax, float[] x) {
+     float rmsx = rms(itmin,itmax,x);
+     float[] rms1x = div(x,rmsx);
+     //Check
+     trace("rms after normalization is "+rms(itmin,itmax,rms1x));
+     return rms1x;
+   }
+   public float[][] makeRms1(int itmin, int itmax, float[][] x) {
+     float rmsx = rms(itmin,itmax,x);
+     float[][] rms1x = div(x,rmsx);
+     //Check
+     trace("rms after normalization is "+rms(itmin,itmax,rms1x));
+     return rms1x;
+   }
+
 
 
   ///////////////////////////////////////////////////////////////////////////
@@ -556,6 +671,10 @@ public class WaveletWarpingHA {
   private double _sfac = 1.0;
   private int _itmin = -1;
   private int _itmax = -1;
+  private float[] _allResRmsAllS;
+  private float _minRmsPercentChange = 0.000f;
+  private int _lastIter = 0;
+  
 
   private double dot(float[] x, float[] y) {
     int nt = x.length;
@@ -729,6 +848,39 @@ public class WaveletWarpingHA {
       convolve(nh,kh,h,x[i],y[i]);
     return y;
   }
+
+  private float percentChange(float xf, float xi) {
+    return (xf-xi)/xi*100.0f;
+  }
+
+  private float[][] computeDataResidual(int nc, int kc, float[] c, int nb, int kb, float[] b,
+    float[][] u, float[][] f, float[][] g) 
+  {
+    Warper warp = new Warper();
+    float[][] csbg = applyH(nc,kc,c,warp.applyS(u,applyH(nb,kb,b,g)));
+    return sub(csbg,f);
+  }
+
+  private float[] convertDToF(double[] d) {
+    int nf = d.length;
+    float[] f = new float[nf];
+    for (int i=0; i<nf; ++i)
+      f[i] = (float) d[i];
+    return f;
+  }
+
+  private float[][] convertDToF(double[][] d) {
+    int nd2 = d.length;
+    int nd1 = d[0].length;
+    float[][] f = new float[nd2][nd1];
+    for (int i2=0; i2<nd2; ++i2)
+      for (int i1=0; i1<nd1; ++i1)
+        f[i2][i1] = (float) d[i2][i1];
+    return f;
+  }
+
+
+
 
   
   private static void trace(String s) {

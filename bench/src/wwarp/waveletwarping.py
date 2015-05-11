@@ -33,7 +33,7 @@ def main(args):
 def goSimpleTest():
   nt,ni = 481,2 # number of time samples; number of impulses
   freq,decay = 0.08,0.05 # peak frequency and decay for wavelet
-  na,ka = 81,-20 # sampling for inverse wavelet A
+  na,ka = 10,-2#81,-20 # sampling for inverse wavelet A
   nh,kh = 181,-90 # sampling for wavelet H
   dt,ft = 0.004,0.000 # used for plotting only
   tmin,tmax = 0,nt-1
@@ -42,35 +42,41 @@ def goSimpleTest():
   st = Sampling(nt,dt,ft)
   for mp in [False]: # True, for minimum-phase; False for other
     hk = getWavelet(freq,decay,nh,kh,mp) # known wavelet
-    for r in [2.0]: # for stretch and squeeze, ...
+    for r in [2]: # for stretch and squeeze, ...
       fmin,fmax = 0.0,min(0.5,0.5*r) # bandpass (lowpass), if stretching
       p,q = makeImpulses(r,nt,ni)
       title = "impulsespsqq"
       f = addWavelet(freq,decay,p,mp)
       g = addWavelet(freq,decay,q,mp)
-      u = rampfloat(0.0,r,nt)
+      #f = addNoise(0.001,42,f)
+      #g = addNoise(0.001,42,g)
+      u = rampfloat(0.0,r,nt)#PS time as a function of PP time
       if r<=1.0:
         u = add((1.0-r)*(nt-1),u)
+        #u is used in warp, which is an interpolator. In the case of
+        #r<=1, if this 
+        #if statement block was not here, the values to interpolate at (u)
+        #woudl not include the wavelets.
       
       #main piece of wavelet estimation code
       ww = WaveletWarping()
       ww.setFrequencyRange(fmin,fmax)
       ww.setTimeRange(tmin,tmax)
       ww.setStabilityFactor(sfac)
-      q = ww.applyB(q)
-      p = ww.applyB(p)
       lq = ww.applyL(u,q)
       sq = ww.applyS(u,lq)
-      plot3TracesSideBySide(st,p,q,sq,tmin*dt,1.6,amax,title=title,pngDir=pngDir,onecol=True)
+      #plot3TracesSideBySide(st,p,q,sq,tmin*dt,1.6,amax,title=title,pngDir=pngDir,onecol=True)
       ak = ww.getWaveletH(nh,kh,hk,na,ka) # known inverse wavelet
       aw = ww.getInverseA(na,ka,u,f,g) # estimated inverse wavelet
-      SimplePlot.asPoints(aw)
+      #SimplePlot.asPoints(aw)
       hw = ww.getWaveletH(na,ka,aw,nh,kh) # estimated wavelet
 
-      #dump(ak)
+      dump(ak)
       dump(aw)
       dump(hw)
       sg = ww.applyS(u,g)
+      lg = ww.applyL(u,g)
+      slg = ww.applyS(u,lg)
       af = ww.applyA(na,ka,aw,f)
       ag = ww.applyA(na,ka,aw,g)
       lag = ww.applyL(u,ag) # lowpass, if squeezing
@@ -81,13 +87,17 @@ def goSimpleTest():
       nhw = normalize(hw)
       nhk = normalize(hk)
       title = "r = "+str(r)
-      #plotSequences(st,[f,g],labels=["f","g"],title=title)
-      #plotSequences(st,[f,sg],labels=["f","Sg"],title=title)
-      #plotSequences(st,[f,g],labels=["f","g"],title=title)
-      #plotSequences(st,[af,ag],labels=["Af","Ag"],title=title)
-      #plotSequences(st,[af,lag],labels=["Af","LAg"],title=title)
-      #plotSequences(st,[af,slag],labels=["Af","SLAg"],title=title)
-      #plotSequences(st,[baf,bslag],labels=["BAf","BSLAg"],title=title)
+      plotSequences(st,[p,q],labels=["p","q"],title=title)
+      plotSequences(st,[p,sq],labels=["p","Sq"],title=title)
+      plotSequences(st,[p,sq,sub(p,sq)],labels=["p","Sq","diff"],title=title)
+      plotSequences(st,[f,g],labels=["f","g"],title=title)
+      plotSequences(st,[f,sg],labels=["f","Sg"],title=title)
+      plotSequences(st,[f,g],labels=["f","g"],title=title)
+      plotSequences(st,[sg,slg],labels=["sg","slg"],title=title)
+      plotSequences(st,[af,ag],labels=["Af","Ag"],title=title)
+      plotSequences(st,[af,lag],labels=["Af","LAg"],title=title)
+      plotSequences(st,[af,slag],labels=["Af","SLAg"],title=title)
+      plotSequences(st,[baf,bslag],labels=["BAf","BSLAg"],title=title)
       plotSequences(st,[f,hslag],labels=["f","HSLAg"],title=title)
       plotWavelets(Sampling(nh,dt,kh*dt),[nhw,nhk],title=title)
       #Impulse Analysis
@@ -99,23 +109,25 @@ def goSimpleTest():
       #plotSequences(st,[p,q],labels=["p","q"],title=title)
       #plotSequences(st,[p,sq],labels=["p","Sq"],title=title)
       #plotSequences(st,[bp,bsq],labels=["Bp","BSq"],title=title)
+
       
 
       title = "initialTraces r = "+str(r)+" mp = "+str(mp)
 
       amax = 5 
-      plot3TracesSideBySide(st,f,g,sg,tmin*dt,1.6,amax,title=title,
-      pngDir=pngDir,onecol=True)
+      #plot3TracesSideBySide(st,f,g,sg,tmin*dt,1.6,amax,title=title,
+      #pngDir=pngDir,onecol=True)
       title = "warpedComparison r = "+str(r)+" mp = "+str(mp)
 
-      plot3TracesSideBySide(st,f,hslag,sg,tmin*dt,1.6,
-      amax,title=title,pngDir=pngDir,onecol=True)
+      #plot3TracesSideBySide(st,f,hslag,sg,tmin*dt,1.6,
+      #amax,title=title,pngDir=pngDir,onecol=True)
       
       title = "estimatedWavelet r = "+str(r)+" mp = "+str(mp)
-      plotWavelets(Sampling(nh,dt,kh*dt),[nhw,nhk],title=title,
-      pngDir=pngDir,onecol=True)
+      #plotWavelets(Sampling(nh,dt,kh*dt),[nhw,nhk],title=title,
+      #pngDir=pngDir,onecol=True)
       amax = 5
  
+      SimplePlot.asPoints(f)
 def goSFacTest():
   nt,ni = 481,2 # number of time samples; number of impulses
   freq,decay = 0.08,0.05 # peak frequency and decay for wavelet
@@ -401,7 +413,7 @@ def goIncorrectWarp(rcor,rincor):
       plotSequences(st,[af,slag],labels=["Af","SLAg"],title=title)
       plotSequences(st,[baf,bslag],labels=["BAf","BSLAg"],title=title)
       plotSequences(st,[f,hslag],labels=["f","HSLAg"],title=title)
-      title = "initialTraces"
+      #title = "initialTraces"
       #plot2TracesSideBySide(st,f,g,tmin*dt,tmax*dt,amax,title=title,
       #pngDir=pngDir,onecol=True)
       #title = "warpedComparison"
@@ -446,7 +458,7 @@ def makeImpulses(r,nt,ni):
 def addWavelet(fpeak,decay,p,mp=False):
   w = 2.0*PI*fpeak
   print "w = "+str(w)
-  if not mp:
+  if not mp:#mp is minimum phase
     decay *= 2.0
     print "decay = "+str(decay)
     w -= 2.0*PI*0.04

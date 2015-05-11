@@ -4,7 +4,7 @@
 from imports import *
 
 from edu.mines.jtk.dsp.Conv import *
-from wwarp import WaveletWarpingHA
+from wwarp import WaveletWarpingAfAgEig
 
 #############################################################################
 #pngdir is the location the images will be sent to.
@@ -20,12 +20,16 @@ def main(args):
 
 def goSino():
   ####Sampling parameters
-  na,ka = 2,0 # sampling for inverse A of wavelet in PS image
-  nh,kh = 2,0 # sampling for wavelet H in PP image
+  naf,kaf = 20,-10 # sampling for inverse A of wavelet in PS image
+  nag,kag = 20,-10 # sampling for inverse A of wavelet in PS image
+  nhf,khf = 81,-40 # sampling for wavelet H in PP image
+  nhg,khg = 81,-40 # sampling for wavelet H in PP image
   nt,dt,ft = 501,0.004,0.000 # used for plotting only
   nx,dx,fx = 721,0.015,0.000
-  sa = Sampling(na,dt,ka*dt)
-  sh = Sampling(nh,dt,kh*dt)
+  saf = Sampling(naf,dt,kaf*dt)
+  sag = Sampling(nag,dt,kag*dt)
+  shf = Sampling(nhf,dt,khf*dt)
+  shg = Sampling(nhg,dt,khg*dt)
   st = Sampling(nt,dt,ft)
   ntg = 852
   stg = Sampling(ntg,dt,ft)
@@ -68,208 +72,33 @@ def goSino():
       #uprime[ix][it] = u[ix][itmin+it]-u[ix][itmin+it-1]
       uprime[ix][it] = u[ix][it]-u[ix][it-1]
   title = "uprime"
-  uprimewin = zerofloat(itmax-itmin+1,nx)
-  for ix in range(0,nx):
-    for it in range(itmin,itmax):
-      uprimewin[ix][it-itmin] = uprime[ix][it]
-  #dump(uprimewin)
-  print "max u'(t) = "+str(ArrayMath.max(uprimewin))
-  print "min u'(t) = "+str(min(uprimewin))
   plotImageTimeU(st,sx,uprime,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=itmax,
   title=title,pngDir=pngDir,twocol=True)
-  SimplePlot.asPixels(uprimewin)
   ####
   
   ####This is the warping with wavelets section.
-  ww = WaveletWarpingHA()
+  ww = WaveletWarpingAfAgEig()
   ww.setTimeRange(itmin,itmax)
   ww.setStabilityFactor(sfac)
-  slg = ww.applyS(u,ww.applyL(u,g)) # PS warping without wavelets
-  ### Initialize and calculate rms of images.
-  ews = zerofloat(12)
-  ewshas = zerofloat(12)
-  ewdeeps = zerofloat(12)
-  e1 = ww.rms(itmin,itmax,sub(f,slg))
-  e1sha = ww.rms(itmin,150,sub(f,slg))
-  e1deep = ww.rms(151,itmax,sub(f,slg))
-  ews[0] = e1
-  ewshas[0] = e1sha
-  ewdeeps[0] = e1deep
-  print "e1",e1
-  print "e1sha",e1sha
-  ###
-  ###Iterating with warping with wavelets
-  for niter in [0,2]:
-    for wha in [0]:#wha=0  means no weight is applied to HA=I
-      print "niter =",niter," wha =",wha
-      suffix = str(niter)+str(int(wha))
+  afag = ww.getInverseAfAg(naf,kaf,nag,kag,u,f,g)
+  awf,awg = separateafag(naf,nag,afag)
+  #Eigenvalue and eigenvector analysis
+  natot = naf+nag
+  for i in range(1):
+    print "eigenvector "+str(i)
+    dump(ww.getEigVector(i))
 
-      ww.setWeightHA(wha)
-      ag = zerofloat(na); ag[-ka] = 1.0 # initial inverse a in g
-      hf = ww.getWaveletH(nh,kh,na,ka,ag,u,f,g) # wavelet h in f
-      hslag = ww.applyHSLA(na,ka,ag,nh,kh,hf,u,g) # PS warping wavelets
+  print "eigval0/eigval1 = "+str(ww.getEig01Ratio());
+  print "eigval0 = "+str(ww.getEigVal(0));
+  print "eigval1 = "+str(ww.getEigVal(1));
 
-      ew = ww.rms(itmin,itmax,sub(f,hslag))
-      print "ew",ew
-      print "ag:"
-      dump(ag)
-      print "hf:"
-      dump(hf)
+  hwf = ww.getWaveletH(naf,kaf,awf,nhf,khf)
+  hwg = ww.getWaveletH(nag,kag,awg,nhg,khg)
 
-      for jiter in range(niter):
-        print "iteration",jiter
-        ag = ww.getInverseA(na,ka,nh,kh,hf,u,f,g) # inverse a in g
-        hf = ww.getWaveletH(nh,kh,na,ka,ag,u,f,g) # wavelet h in f
+  nhwf = normalizeMAAWOS(hwf)
+  nhwg = normalizeMAAWOS(hwg)
 
-        print "ag:"
-        dump(ag)
-        print "hf:"
-        dump(hf)
-
-        hslag = ww.applyHSLA(na,ka,ag,nh,kh,hf,u,g) # PS warping wavelets
-        ### Calculate rms of images.
-        ew = ww.rms(itmin,itmax,sub(f,hslag))
-        ews[jiter+1] = ew
-        ewsha = ww.rms(itmin,150,sub(f,hslag))
-        ewshas[jiter+1] = ewsha
-        ewdeep = ww.rms(151,itmax,sub(f,hslag))
-        ewdeeps[jiter+1] = ewdeep
-        print "ew",ew
-        print "ewsha",ewsha
-        print "ewdeep",ewdeep
-        hg = ww.getWaveletH(na,ka,ag,nh,kh) # wavelet in g
-        ###
-
-      aG = ww.applyA(na,ka,ag,g) #Apply inverse a to g
-      hg = ww.getWaveletH(na,ka,ag,nh,kh) # wavelet in g
-      sg = ww.applyS(u,ww.applyL(u,g)) # simply squeezing g
-      hslag = ww.applyHSLA(na,ka,ag,nh,kh,hf,u,g) # PS warping with wavelets
-
-      ew = ww.rms(itmin,itmax,sub(f,hslag))
-      print "  e1 =",e1," ew =",ew
-
-      title="wavelets"+suffix
-      plotWaveletsPpPs(sh,hf,hg,0.9,0.8,16.0/9.0,title=title,pngDir=pngDir,twocol=True)
-
-      
-      #Make images within specified window have rms of 1.
-      frms = ww.rms(itmin,itmax,f)
-      frmsI = div(f,frms)
-      sgrms = ww.rms(itmin,itmax,sg)
-      sgrmsI = div(sg,sgrms)
-      slgrms = ww.rms(itmin,itmax,slg)
-      slgrmsI = div(slg,slgrms)
-
-      print "###niter",niter
-      if niter==0:
-        ixmin=int(0/dx)
-        ixmax=int(10.8/dx)
-        hslg0 = ww.applyHSLA(na,ka,ag,nh,kh,hf,u,g) # PS warping with wavelets
-        #Make images within specified window have rms of 1.
-        hslg0rms = ww.rms(hslg0)#ww.rms(itmin,itmax,hslg0)
-        hslg0rmsI = div(hslg0,hslg0rms)
-        title="frmshslg0rms"
-        plot2ImagesSideBySide(st,sx,frmsI,hslg0rmsI,itmin,itmax,ixmin,ixmax,0.5,2.0,2.0,0.9,0.8,
-        16.0/9.0,title=title,pngDir=pngDir,twocol=True)
-        title="frmsslgrms"
-        plot2ImagesSideBySide(st,sx,frmsI,slgrmsI,itmin,itmax,ixmin,ixmax,0.5,2.0,2.0,0.9,0.8,
-        16.0/9.0,title=title,pngDir=pngDir,twocol=True)
-        title="hslg0rms"
-        plotImageTimeWhole(st,sx,hslg0rmsI,"PP time (s)",0.9,0.8,16.0/9.0,
-        itmin=itmin,itmax=itmax,title=title,pngDir=pngDir,twocol=True)
-        title="hslg0rmsShal"
-        plotImageTimeWhole(st,sx,hslg0rmsI,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=150,
-        title=title,pngDir=pngDir,twocol=True)
-        title="slgrmsShal"
-        plotImageTimeWhole(st,sx,slgrmsI,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=150,
-        title=title,pngDir=pngDir,twocol=True)
-        title="slgrms"
-        plotImageTimeWhole(st,sx,slgrmsI,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=itmax,
-        title=title,pngDir=pngDir,twocol=True)
-        title="fzoom"
-        plotImageTimeWhole(st,sx,frmsI,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=150,
-        title=title,pngDir=pngDir,twocol=True)
-
-
-
-      if niter!=0:
-        Ag = ww.applyA(na,ka,ag,g)
-        lAg = ww.applyL(u,Ag)
-        slAg = ww.applyS(u,lAg)
-        hslAg = ww.applyH(nh,kh,hf,slAg)
-        Agrms = ww.rms(itmin,itmax,Ag)
-        AgrmsI = div(Ag,Agrms)
-        lAgrms = ww.rms(itmin,itmax,lAg)
-        lAgrmsI = div(lAg,lAgrms)
-        slAgrms = ww.rms(itmin,itmax,slAg)
-        slAgrmsI = div(slAg,slAgrms)
-        hslAgrms = ww.rms(itmin,itmax,hslAg)
-        hslAgrmsI = div(hslAg,hslAgrms)
-
-        hslag11 = ww.applyHSLA(na,ka,ag,nh,kh,hf,u,g) # PS warping with wavelets
-        #Make images within specified window have rms of 1.
-        hslag11rms = ww.rms(hslag11)#ww.rms(itmin,itmax,hslag11)
-        hslag11rmsI = div(hslag11,hslag11rms)
-        print "frms",ww.rms(itmin,itmax,f)
-        print "sgrms",slgrms
-        print "hslg0rms",hslg0rms
-        print "hslag11rms",hslag11rms
-
-        ewsmax = max(ews)
-        print "ewsmax=",ewsmax
-        news = ews#div(ews,ewsmax)
-        newshas = ewshas#div(ewshas,ewsmax)
-        newdeeps = ewdeeps#div(ewdeeps,ewsmax)
-        #Take out first sample (iteration 0)
-        sews11 = Sampling(11,1.0,1.0)
-        news11 = zerofloat(11)
-        newshas11 = zerofloat(11)
-        newdeeps11 = zerofloat(11)
-        dnews11 = zerofloat(11)
-        dnewshas11 = zerofloat(11)
-        dnewdeeps11 = zerofloat(11)
-        for i in range(1,12):
-          news11[i-1] = news[i]
-          newshas11[i-1] = newshas[i]
-          newdeeps11[i-1] = newdeeps[i]
-        for i in range(0,11):
-          dnews11[i] = news11[i] - news11[0] 
-          dnewshas11[i] = newshas11[i] - newshas11[0] 
-          dnewdeeps11[i] =  newdeeps11[i] - newdeeps11[0] 
- ###
- ####
-
-
-
-        title="frmshslg11rms"
-        plot2ImagesSideBySide(st,sx,frmsI,hslag11rmsI,itmin,itmax,ixmin,ixmax,0.5,2.0,2.0,0.9,0.8,
-        16.0/9.0,title=title,pngDir=pngDir,twocol=True)
-        title="hslg11rms"
-        plotImageTimeWhole(st,sx,hslag11rmsI,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=itmax,
-        title=title,pngDir=pngDir,twocol=True)
-        title="hslg11rmsShal"
-        plotImageTimeWhole(st,sx,hslag11rmsI,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=150,
-        title=title,pngDir=pngDir,twocol=True)
-        title="Ag"
-        plotImageTimeWhole(stg,sx,AgrmsI,"PS time (s)",0.9,0.8,16.0/9.0,itmin=228,itmax=700,
-        title=title,pngDir=pngDir,twocol=True)
-        title="lAg"
-        plotImageTimeWhole(stg,sx,lAgrmsI,"PS time (s)",0.9,0.8,16.0/9.0,itmin=228,itmax=700,
-        title=title,pngDir=pngDir,twocol=True)
-        title="slAg"
-        plotImageTimeWhole(st,sx,slAgrmsI,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=itmax,
-        title=title,pngDir=pngDir,twocol=True)
-        title="hslAg"
-        plotImageTimeWhole(st,sx,hslAgrmsI,"PP time (s)",0.9,0.8,16.0/9.0,itmin=itmin,itmax=itmax,
-        title=title,pngDir=pngDir,twocol=True)
-
-        title="drms11full"
-        plotRMSDiff(sews11,dnews11,0.9,0.8,16.0/9.0,-0.009,0.001,color=Color.BLACK,title=title,pngDir=pngDir,twocol=True)
-        title="drms11fullsha"
-        plotRMSDiff2(sews11,dnews11,dnewdeeps11,0.9,0.8,16.0/9.0,-0.009,0.001,color1=Color.BLACK,color2=Color.BLUE,title=title,pngDir=pngDir,twocol=True)
-        title="drms11fullshadeep"
-        plotRMSDiff3(sews11,dnews11,dnewshas11,dnewdeeps11,0.9,0.8,16.0/9.0,-0.009,0.001,title=title,pngDir=pngDir,twocol=True)
-
+  plotWaveletsPpPs(shf,nhwf,nhwg,0.9,0.8,16.0/9.0,title=title,pngDir=pngDir,twocol=True)
 
 def getSinoImages():
   dataDir = "/Users/Chris/data/sinos/"
@@ -306,6 +135,16 @@ def gain(hw,f):
 
 def normalizeMax(f):
   return mul(1.0/max(abs(f)),f,f)
+ 
+def normalizeMAAWOS(f):
+  minf = min(f)
+  maxf = max(f)
+  absminf = abs(minf) 
+  absmaxf = abs(maxf) 
+  if absminf<absmaxf:
+    return mul(1.0/maxf,f)
+  else:
+    return mul(1.0/minf,f)
 
 def normalizeRms(f):
   mul(1.0/rms(f),f,f)
@@ -943,6 +782,17 @@ def max(x):
       max = x[it]
   return max
 
+def separateafag(naf,nag,afag):
+  na = naf+nag
+  af = zerofloat(naf)
+  ag = zerofloat(nag)
+  for i in range(0,naf):
+    af[i] = afag[i]
+  ii=0
+  for i in range(naf,na):
+    ag[ii] = afag[i]
+    ii = ii + 1
+  return af,ag
 
 def plotSpectrum(sf,spec,title,amax=None):
   sp = SimplePlot(SimplePlot.Origin.LOWER_LEFT)

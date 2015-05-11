@@ -9,7 +9,6 @@ from testing import Synthetic
 from linalgebra import ToeplitzRecursion
 from java.util import Random
 
-
 #pngDir = "./png/figures/"
 pngDir = None
 
