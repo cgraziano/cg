@@ -34,24 +34,14 @@ JTK” section in the readme.txt file in the mines jtk.
 #########Research#######################################################################
 Inside the wwarp folder, you will find files pertaining to our research. 
 
-Note, the png and pres14 folders are the destinations for images created for our
-CWP report (png) and our presentation (pres14).
+The java files that correspond to the code used in my 2015 presentation are
+WaveletWarpingCBCyclic.java and WaveletWarpingCBGN.java, which correspond
+to the cyclic search and Gauss-Newton method, respectively. 
+Any code that is commented out in these two files corresponds to experimental code
+that has not been fully tested.
 
-In each file, there should be a small description of the purpose of why the file exists
-in the first few lines of the file.
-
-The files that begin with cwppres… are the files used to generate the figures for
-our wavelets and warping PS seismic images presentation, which was presented at the
-2014 CWP annual meeting.
-
-The files that begin with nmo deal with different tests of the warping with wavelets
-algorithm with one or multiple CMP gathers.
-
-The  main files that are related to warping PS seismic images are waveletwarping.py
-and waveletwarpingha.py. 
-
-The other files represent research in progress or files that I’m
-not sure whether I will need later on.
+Many python files exist that use these two java files, but the python file that was used to create
+my images in the presentation are in cwppres15synthetics.py.
 
 Note that my repository does not contain data, if you have data that you want to run 
 through the existing scripts, modify the methods that deal with extracting the data
