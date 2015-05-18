@@ -4522,17 +4522,18 @@ def goSino1000ShapingFilter():
 
 def goSinopec1():
   #get sino images
-  x0 = 250
+  x0 = 400
   f,g,u = getSinoTrace(x0)
   st = Sampling(len(f),0.004,0.0)
-  #plotAmplitudeSpectrumT(st,f,100,400,"amp f")
-  #plotAmplitudeSpectrumT(st,g,225,700,"amp g")
+  plotAmplitudeSpectrumT(st,f,0,499,"amp f")
+  plotAmplitudeSpectrumT(st,g,0,700,"amp g")
   #ref = RecursiveExponentialFilter(10)
   #ref.apply1(g,g)
   #SimplePlot.asPoints(g)
   #ref = RecursiveExponentialFilter(3)
   #ref.apply1(f,f)
   #SimplePlot.asPoints(f)
+  """
   ng = len(g)
   nu = len(u)
 
@@ -4765,6 +4766,7 @@ def goSinopec1():
   st = Sampling(nb,dt,kb*dt)
   plotting.plotWavelets(st,[nbw],hint=hint,title=title,pngDir=pngDir,paper=True,
   onecol=True)
+  """
   """
 
 def goSinopec():

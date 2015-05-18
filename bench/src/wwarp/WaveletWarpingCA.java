@@ -9,28 +9,28 @@ package wwarp;
 import edu.mines.jtk.dsp.*;
 import edu.mines.jtk.lapack.*;
 import edu.mines.jtk.util.Check;
-import edu.mines.jtk.mosaic.*;
 import static edu.mines.jtk.dsp.Conv.*;
 import static edu.mines.jtk.util.ArrayMath.*;
 
 /**
- * Estimates a wavelet from alignment by warping of sequences or images.
+ * Estimates a wavelet from alignment by the warping of sequences or images.
  * The two sequences or images are assumed to have been convolved with the
- * same wavelet. Warping of one sequence or image to align with the other will
+ * same wavelet c, which is the inverse of the inverse wavelet a. 
+ * Warping of one sequence or image to align with the other will
  * cause the wavelet to be stretched or squeezed, and this distortion enables
- * us to estimate the wavelet.
+ * us to estimate the wavelet. 
  * <p>
  * For images, convolution with the wavelet is assumed to be in only the 1st
  * dimension. For definiteness, this 1st dimension is assumed to be time in
  * the documentation below.
  *
- * @author Dave Hale, Colorado School of Mines
- * @version 2014.01.27
+ * @author Chris Graziano, Colorado School of Mines
+ * @version 2015.05.18
  */
 public class WaveletWarpingCA {
 
   /**
-   * Sets the min-max range of times used to estimate wavelet.
+   * Sets the min-max range of times used to estimate wavelet c.
    * @param itmin minimum time, in samples.
    * @param itmax maximum time, in samples.
    */
@@ -40,7 +40,7 @@ public class WaveletWarpingCA {
   }
 
   /**
-   * Sets the min-max range of frequencies used to estimate the wavelet.
+   * Sets the min-max range of frequencies used to estimate wavelet c.
    * If the specified min-max bounds on frequency are not a subset of the
    * zero-Nyquist range [0,0.5], then no bandpass filter is used. The default
    * is to use no bandpass filter.
@@ -57,7 +57,7 @@ public class WaveletWarpingCA {
 
   /**
    * Sets the stability factor by which to scale zero-lag of correlations.
-   * A factor slightly greater than one may stabilize estimates of
+   * A factor slightly greater than zero may stabilize estimates of
    * inverse wavelets A.
    * @param sfac stability factor.
    */
@@ -107,7 +107,7 @@ public class WaveletWarpingCA {
     //System.out.println("c=\n"+c);
     //System.out.println("b=\n"+b);
 
-    // Solve for inverse filter a using Cholesky decomposition of C.
+    // Solve for inverse wavelet a using Cholesky decomposition of C.
     DMatrixChd chd = new DMatrixChd(c);
     DMatrix a = chd.solve(b);
     float[] aa = new float[na];
@@ -121,7 +121,6 @@ public class WaveletWarpingCA {
     }
     return aa;
   }
-
   public float[] getInverseA(
     int na, int ka, float[][] u, float[][] f, float[][] g)
   {
@@ -154,7 +153,7 @@ public class WaveletWarpingCA {
     //System.out.println("c=\n"+c);
     //System.out.println("b=\n"+b);
 
-    // Solve for inverse filter a using Cholesky decomposition of C.
+    // Solve for inverse wavelet a using Cholesky decomposition of C.
     DMatrixChd chd = new DMatrixChd(c);
     DMatrix a = chd.solve(b);
     float[] aa = new float[na];
@@ -170,46 +169,46 @@ public class WaveletWarpingCA {
   }
 
   /**
-   * Estimates the wavelet h from the inverse wavelet a.
+   * Estimates the wavelet c from the inverse wavelet a.
    * @param na number of samples in the inverse wavelet a.
    * @param ka the sample index for a[0].
    * @param a array of coefficients for the inverse wavelet a.
-   * @param nh number of samples in the wavelet h.
-   * @param kh the sample index for h[0].
+   * @param nc number of samples in the wavelet c.
+   * @param kc the sample index for c[0].
    */
-  public float[] getWaveletC(int na, int ka, float[] a, int nh, int kh) {
+  public float[] getWaveletC(int na, int ka, float[] a, int nc, int kc) {
     float[] one = {1.0f};
-    float[] ca1 = new float[nh];
-    float[] caa = new float[nh];
-    xcor(na,ka,a,1,0,one,nh,kh,ca1);
-    xcor(na,ka,a,na,ka,a,nh, 0,caa);
+    float[] ca1 = new float[nc];
+    float[] caa = new float[nc];
+    xcor(na,ka,a,1,0,one,nc,kc,ca1);
+    xcor(na,ka,a,na,ka,a,nc, 0,caa);
     SymmetricToeplitzFMatrix stm = new SymmetricToeplitzFMatrix(caa);
     return stm.solve(ca1);
   }
 
   /**
-   * Applies the specified wavelet H.
-   * @param nh number of samples in the wavelet h.
-   * @param kh the sample index for h[0].
-   * @param h array of coefficients for the wavelet h.
+   * Applies the specified wavelet c.
+   * @param nc number of samples in the wavelet c.
+   * @param kc the sample index for c[0].
+   * @param c array of coefficients for the wavelet c.
    * @param f array with input sequence f(t).
    * @return array with filtered output sequence.
    */
-  public float[] applyC(int nh, int kh, float[] h, float[] f) {
-    return convolve(nh,kh,h,f);
+  public float[] applyC(int nc, int kc, float[] c, float[] f) {
+    return convolve(nc,kc,c,f);
   }
-  public float[][] applyC(int nh, int kh, float[] h, float[][] f) {
-    return convolve(nh,kh,h,f);
+  public float[][] applyC(int nc, int kc, float[] c, float[][] f) {
+    return convolve(nc,kc,c,f);
   }
 
   /**
-   * Applies the bandpass filter B, if any was specified.
+   * Applies the bandpass filter E, if any was specified.
    * If no bandpass filter has been specified, then this method simply returns
    * a copy of the specified input sequence.
    * @param f array with input sequence f(t).
    * @return array with filtered output sequence.
    */
-  public float[] applyB(float[] f) {
+  public float[] applyBandPassFilter(float[] f) {
     float[] g = new float[f.length];
     if (_bpf!=null) {
       _bpf.apply(f,g);
@@ -218,24 +217,25 @@ public class WaveletWarpingCA {
     }
     return g;
   }
-  public float[][] applyB(float[][] f) {
+  public float[][] applyBandPassFilter(float[][] f) {
     int n = f.length;
     float[][] g = new float[n][];
     for (int i=0; i<n; ++i)
-      g[i] = applyB(f[i]);
+      g[i] = applyBandPassFilter(f[i]);
     return g;
   }
 
   /**
-   * Estimates that shaping filter that will shape SBg to f.
+   * Estimates that shaping filter that will shape SAg to f.
+   * The sequences f and g are related by warping such that f[t] ~ g[u[t]].
    * @param nc number of samples in wavelet c.
-   * @param kc the sample index for a[0].
-   * @param nb number of samples in the wavelet h.
-   * @param kb the sample index for h[0].
-   * @param b array of coefficients for the inverse wavelet a.
-   * @param u relates PP time to PS time (in samples).
-   * @param f the PP trace.
-   * @param g the PS trace.
+   * @param kc the sample index for c[0].
+   * @param na number of samples in the inverse wavelet a.
+   * @param ka the sample index for a[0].
+   * @param a array of coefficients for the inverse wavelet a.
+   * @param u array of samples for warping u[t].
+   * @param f array of samples for sequence f[t].
+   * @param g array of samples for sequence g[t]
    */
   public float[] getWaveletC(
     int nc, int kc, int nb, int kb, float[] b, float stabFact,
@@ -260,7 +260,6 @@ public class WaveletWarpingCA {
           qq.set(ic,jc,((1.0+(double) stabFact)*qq.get(ic,jc)));
       }
     }
-    //trace(qq.toString());
     //Q'f
     DMatrix qf = new DMatrix(nc,1);
     for (int ic=0,lagi=kc; ic<nc; ++ic,++lagi) {
@@ -269,7 +268,7 @@ public class WaveletWarpingCA {
       qf.set(ic,0,qif);
     }
 
-    // Solve for wavelet C.
+    // Solve for wavelet c.
     DMatrixChd chd = new DMatrixChd(qq);
     DMatrix h = chd.solve(qf);
     return convertDToF(h.getArray());
@@ -306,26 +305,32 @@ public class WaveletWarpingCA {
       qf.set(ic,0,qif);
     }
 
-    // Solve for wavelet C.
+    // Solve for wavelet c.
     DMatrixChd chd = new DMatrixChd(qq);
     DMatrix h = chd.solve(qf);
     trace("h:");
     trace(h.toString());
     return convertDToF(h.getArray());
   }
-
-
   ///////////////////////////////////////////////////////////////////////////
   // private
-
   private double _sfac = 0.0;
   private int _itmin = -1;
   private int _itmax = -1;
   private BandPassFilter _bpf;
 
   /**
-   * Returns the array of differences D = B(SLG-F).
    */
+  /**
+   * Returns the array of differences D = E(SG-F).
+   * The sequences f and g are related by warping such that f[t] ~ g[u[t]].
+   * @param na number of samples in the inverse wavelet a.
+   * @param ka the sample index for a[0].
+   * @param u array of samples for warping u[t].
+   * @param f array of samples for sequence f[t].
+   * @param g array of samples for sequence g[t]
+   */
+
   private float[][] computeDifferences(
     int na, int ka, float[] u, float[] f, float[] g)
   {
@@ -339,7 +344,7 @@ public class WaveletWarpingCA {
       dfi = delay(lagi,f);
       sdgi = warp.applyS(u,delay(lagi,g));
       di = sub(sdgi,dfi);
-      d[ia] = applyB(di);
+      d[ia] = applyBandPassFilter(di);
     }
     return d;
   }
@@ -362,6 +367,12 @@ public class WaveletWarpingCA {
     return d;
   }
 
+  /**
+   * Returns the dot product of two sequences for all
+   * samples in the specified time range. The time range can be
+   * specified by the method setTimeRange or within the 
+   * dot method itself.
+   */
   private double dot(float[] x, float[] y) {
     int nt = x.length;
     int itlo = (_itmin>0)?_itmin:0;
@@ -372,7 +383,6 @@ public class WaveletWarpingCA {
     }
     return sum;
   }
-
   private double dot(float[][] x, float[][] y) {
     int nx = x.length;
     int nt = x[0].length;
@@ -381,6 +391,28 @@ public class WaveletWarpingCA {
       sum += dot(x[ix],y[ix]);
     return sum;
   }
+  private double dot(int itmin, int itmax, float[] x, float[] y) {
+    int nt = x.length;
+    int itlo = (itmin>0)?itmin:0;
+    int ithi = (itmax>0)?itmax:nt-1;
+    double sum = 0.0;
+    for (int it=itlo; it<=ithi; ++it) {
+      sum += x[it]*y[it];
+    }
+    return sum;
+  }
+  private double dot(int itmin, int itmax, float[][] x, float[][] y) {
+    int nx = x.length;
+    int nt = x[0].length;
+    double sum = 0.0;
+    for (int ix=0; ix<nx; ++ix) 
+      sum += dot(itmin,itmax,x[ix],y[ix]);
+    return sum;
+  }
+
+  /**
+   * Returns the dot product of two sequences for all samples.
+   */
   private double dotAll(float[] x, float[] y) {
     int nt = x.length;
     double sum = 0.0;
@@ -397,28 +429,9 @@ public class WaveletWarpingCA {
       sum += dotAll(x[ix],y[ix]);
     return sum;
   }
-  private double dot(int itmin, int itmax, float[] x, float[] y) {
-    int nt = x.length;
-    int itlo = (itmin>0)?itmin:0;
-    int ithi = (itmax>0)?itmax:nt-1;
-    double sum = 0.0;
-    for (int it=itlo; it<=ithi; ++it) {
-      sum += x[it]*y[it];
-    }
-    return sum;
-  }
-
-  private double dot(int itmin, int itmax, float[][] x, float[][] y) {
-    int nx = x.length;
-    int nt = x[0].length;
-    double sum = 0.0;
-    for (int ix=0; ix<nx; ++ix) 
-      sum += dot(itmin,itmax,x[ix],y[ix]);
-    return sum;
-  }
 
   /**
-   * Returns y(t) = x(t-lag).
+   * Returns y[t] = x[t-lag].
    */
   public static float[] delay(int lag, float[] x) {
     int nt = x.length;
@@ -442,26 +455,26 @@ public class WaveletWarpingCA {
   }
 
   /**
-   * Returns y(t) = h(t)*x(t), where * denotes convolution.
+   * Returns y = c*x, where * denotes convolution.
    */
-  private static float[] convolve(int nh, int kh, float[] h, float[] x) {
+  private static float[] convolve(int nc, int kc, float[] c, float[] x) {
     int nt = x.length;
     float[] y = new float[nt];
-    convolve(nh,kh,h,x,y);
+    convolve(nc,kc,c,x,y);
     return y;
   }
   private static void convolve(
-    int nh, int kh, float[] h, float[] f,  float[] g)
+    int nc, int kc, float[] c, float[] f,  float[] g)
   {
     int nt = f.length;
-    conv(nh,kh,h,nt,0,f,nt,0,g);
+    conv(nc,kc,c,nt,0,f,nt,0,g);
   }
-  private static float[][] convolve(int nh, int kh, float[] h, float[][] x) {
+  private static float[][] convolve(int nc, int kc, float[] c, float[][] x) {
     int n = x.length;
     int nt = x[0].length;
     float[][] y = new float[n][nt];
     for (int i=0; i<n; ++i)
-      convolve(nh,kh,h,x[i],y[i]);
+      convolve(nc,kc,c,x[i],y[i]);
     return y;
   }
 

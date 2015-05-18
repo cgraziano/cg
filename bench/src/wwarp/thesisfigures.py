@@ -34,7 +34,7 @@ def main(args):
   #noiseComparisonCyclic()
   goSinopecGN()
   #goSinopecCyclic()
-  goGBCGN()
+  #goGBCGN()
 
 def impulseConstantSqueezing():
   #Synthetic parameters
@@ -2425,9 +2425,9 @@ def goSinopecGN():
   tmax = 500
 
   #Estimate wavelet
-  niter = 300
+  niter = 100
   ww = WaveletWarpingCBGN()
-  ww.setMinPercentChange(0.01)#units are percentage.
+  ww.setMinPercentChange(0.00)#units are percentage.
   ww.setTimeRange(tmin,tmax)
   #First guesses of c and b. 
   bone = zerofloat(nb)
