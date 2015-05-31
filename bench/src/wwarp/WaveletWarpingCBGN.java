@@ -77,7 +77,8 @@ public class WaveletWarpingCBGN {
    * that you wish to have a decrease in the residuals.
    * @param minRmsPercentChange The minimum percent change needed to stop this iterative method.
    */
-  public void setMinPercentChange(float minRmsPercentChange) {
+  public void setMinPercentChange(float minRmsPercentChange) 
+  {
     _minRmsPercentChange = minRmsPercentChange;
   }
 
@@ -102,43 +103,7 @@ public class WaveletWarpingCBGN {
     Check.argument(kb<=0,"kb<=0");
     Check.argument(-nc<kc,"-nc<kc");
     Check.argument(kc<=0,"kc<=0");
-
-    //trace("bGuess");//db
-    //dump(bGuess);//db
-    //trace("cGuess");//db
-    //dump(cGuess);//db
-
-    _dataResRmsInitS = new float[niter];//db
-    _dataResRmsFinaS = new float[niter];//db
-    _dataRes2NormSqInitS = new float[niter];//db
-    _dataRes2NormSqFinaS = new float[niter];//db
-    _bPenaltyRes2NormSqInitS = new float[niter];//db
-    _bPenaltyRes2NormSqFinaS = new float[niter];//db
-    _cPenaltyRes2NormSqInitS = new float[niter];//db
-    _cPenaltyRes2NormSqFinaS = new float[niter];//db
-    _allResRmsInitS = new float[niter];//db
-    _allResRmsFinaS = new float[niter];//db
-    _allResRmsAllS = new float[niter];//db
-    _allRes2NormSqInitS = new float[niter];//db
-    _allRes2NormSqFinaS = new float[niter];//db
-    _alphaBS = new float[niter];
-    _alphaCS = new float[niter];
-
-    _stepLengthS = new float[niter];//db
-    _conditionNumberS = new float[niter];//db
-    _b2NormS = new float[niter];//db
-    _c2NormS = new float[niter];//db
-    _deltaB2NormS = new float[niter];//db
-    _deltaC2NormS = new float[niter];//db
-    _gradient2NormS = new float[niter];//db
-    _rmsPercentChangeS = new float[niter];//db
-
-    _zDiag= new double[nc];
-    _wDiag = new double[nb];
-    _alphaB = 0.0;
-    _alphaC = 0.0;
-    _scaleW = sqrt(dot(f,f));
-    _scaleZ = sqrt(dot(f,f));
+    initializeAllRequiredFields(nb,nc,niter,f);
 
     int nbc = nb+nc;
     float[] b = copy(bGuess);
@@ -148,28 +113,10 @@ public class WaveletWarpingCBGN {
     float[] deltaBDeltaC = new float[nbc];
     float[] deltaB = new float[nb];
     float[] deltaC = new float[nc];
-    float[] dataResInit = new float[f.length];
-    float[] bPenaltyResInit = new float[nb];
-    float[] cPenaltyResInit = new float[nc];
-    float[] dataResFina = new float[f.length];
-    float[] bPenaltyResFina = new float[nb];
-    float[] cPenaltyResFina = new float[nc];
     float[] minC = new float[nc];
     float[] minB = new float[nb];
     float minAllResRmsFina = Float.MAX_VALUE;
     int minIter = 0;
-    float allResRmsInit = 0.0f;
-    float allResRmsFina = 0.0f;
-    float allRes2NormSqInit = 0.0f;
-    float allRes2NormSqFina = 0.0f;
-    float dataResRmsInit = 0.0f;
-    float dataResRmsFina = 0.0f;
-    float dataRes2NormSqInit = 0.0f;
-    float dataRes2NormSqFina = 0.0f;
-    float bPenaltyRes2NormSqInit = 0.0f;
-    float bPenaltyRes2NormSqFina = 0.0f;
-    float cPenaltyRes2NormSqInit = 0.0f;
-    float cPenaltyRes2NormSqFina = 0.0f;
     float stepLength = 0.0f;
     float b2Norm = 0.0f;
     float c2Norm = 0.0f;
@@ -181,40 +128,19 @@ public class WaveletWarpingCBGN {
 
     setWDiagAndZDiag(nc,kc,c,nb,kb,b);
     //Gauss-Newton iterations
-    for (int iter=0; iter<niter; ++iter) {
+    int niterMinusOne = niter-1;//leaves room for the last diagnostic measurement to fit into 
+                                //its corresponding diagnostic array.
+    for (int iter=0; iter<niterMinusOne; ++iter) {
       trace("###############iter = "+iter+"#####################");//db
-      trace("alphaB = "+_alphaB);
-      trace("current b:");
-      dump(b);
-      trace("current c:");
-      dump(c);
-      trace("W diag:");
-      dump(_wDiag);
-      trace("Z diag:");
-      dump(_zDiag);
-      //Compute Initial Residuals
-      dataResInit = computeDataResidual(nc,kc,c,nb,kb,b,u,f,g);
-      bPenaltyResInit = computeBPenaltyResidual(convertFToD(b),_wDiag);
-      trace("bPenaltyResInit:");
-      dump(bPenaltyResInit);
-      cPenaltyResInit = computeCPenaltyResidual(convertFToD(c),_zDiag);
-      //Compute Initial Measures of Residuals
-      dataResRmsInit = rms(dataResInit);
-      dataRes2NormSqInit = (float) dot(dataResInit,dataResInit);
-      bPenaltyRes2NormSqInit = (float) dotAll(bPenaltyResInit,bPenaltyResInit);
-      cPenaltyRes2NormSqInit = (float) dotAll(cPenaltyResInit,cPenaltyResInit);
-      allResRmsInit = rmsOfObjectiveFunction(dataResInit,bPenaltyResInit,cPenaltyResInit);
-      trace("dataRes2NormSqInit = "+dataRes2NormSqInit);
-      trace("bPenaltyRes2NormSqInit = "+bPenaltyRes2NormSqInit);
-      trace("cPenaltyRes2NormSqInit = "+cPenaltyRes2NormSqInit);
-      allRes2NormSqInit = dataRes2NormSqInit+bPenaltyRes2NormSqInit+cPenaltyRes2NormSqInit;
+      computeAndStoreAllInitialResiduals(nc,kc,c,nb,kb,b,u,f,g);
+      computeAndStoreInitialMeasuresOfResiduals();
 
       if (iter==0)
-        _firstAll2NormSq = allRes2NormSqInit;
-      _firstAll2NormSqTemp = allRes2NormSqInit; 
+        _firstAll2NormSq = _allRes2NormSqInit;
+      _firstAll2NormSqTemp = _allRes2NormSqInit; 
       
       ////////////Build Hessian and gradient/////////////////
-      xv = buildApproxHessianAndGradient(nc,kc,c,nb,kb,b,dataResInit,u,g);
+      xv = buildApproxHessianAndGradient(nc,kc,c,nb,kb,b,_dataResInit,u,g);
       x = xv[0];
       v = xv[1];
 
@@ -242,68 +168,12 @@ public class WaveletWarpingCBGN {
       cNew = add(c,deltaC);
 
       //Compute Final Residuals
-      dataResFina = computeDataResidual(nc,kc,cNew,nb,kb,bNew,u,f,g);
-      bPenaltyResFina = computeBPenaltyResidual(convertFToD(bNew),_wDiag);
-      cPenaltyResFina = computeCPenaltyResidual(convertFToD(cNew),_zDiag);
+      computeAndStoreAllFinalResiduals(nc,kc,cNew,nb,kb,bNew,u,f,g);
       //Compute Final Measures of Residuals
-      dataResRmsFina = rms(dataResFina);
-      dataRes2NormSqFina = (float) dot(dataResFina,dataResFina);
-      bPenaltyRes2NormSqFina = (float) dotAll(bPenaltyResFina,bPenaltyResFina);
-      cPenaltyRes2NormSqFina = (float) dotAll(cPenaltyResFina,cPenaltyResFina);
-      allResRmsFina = rmsOfObjectiveFunction(dataResFina,bPenaltyResFina,cPenaltyResFina);
-      allRes2NormSqFina = dataRes2NormSqFina+bPenaltyRes2NormSqFina+cPenaltyRes2NormSqFina;
-      rmsPercentChange = percentChange(allResRmsFina,allResRmsInit);
+      computeAndStoreFinalMeasuresOfResiduals();
+      computeAndStoreRMSPercentChange();
 
-      //Debugging Information
-      if (iter == 0)
-        _allResRmsAllS[0] = allResRmsInit;
-      else
-        _allResRmsAllS[iter] = allResRmsInit;
-      _allResRmsAllS[iter] = allResRmsInit;
-      //_allResRmsAllS[iter+1] = allResRmsFina;
-      _dataResRmsInitS[iter] = dataResRmsInit;
-      _dataResRmsFinaS[iter+1] = dataResRmsFina;
-      _dataRes2NormSqInitS[iter] = dataRes2NormSqInit;
-      _dataRes2NormSqFinaS[iter+1] = dataRes2NormSqFina;
-      _bPenaltyRes2NormSqInitS[iter] = bPenaltyRes2NormSqInit;
-      _bPenaltyRes2NormSqFinaS[iter+1] = bPenaltyRes2NormSqFina;
-      _cPenaltyRes2NormSqInitS[iter] = cPenaltyRes2NormSqInit;
-      _cPenaltyRes2NormSqFinaS[iter+1] = cPenaltyRes2NormSqFina;
-      _allResRmsInitS[iter] = allResRmsInit;
-      _allResRmsFinaS[iter+1] = allResRmsFina;
-      _allRes2NormSqInitS[iter] = allRes2NormSqInit;
-      _allRes2NormSqFinaS[iter+1] = allRes2NormSqFina;
-      _stepLengthS[iter] = stepLength;
-      _conditionNumberS[iter] = (float)x.cond();
-      _b2NormS[iter] = twoNorm(b);
-      _c2NormS[iter] = twoNorm(c);
-      _deltaB2NormS[iter] = twoNorm(deltaB);
-      _deltaC2NormS[iter] = twoNorm(deltaC);
-      _gradient2NormS[iter] = twoNorm(v);
-      _alphaBS[iter] = (float)_alphaB;
-      _alphaCS[iter] = (float)_alphaC;
-      _rmsPercentChangeS[iter] = rmsPercentChange;
-
-      trace("Initial RMS of All Residuals: "+allResRmsInit);
-      trace("Final RMS of All Residuals: "+allResRmsFina);
-      trace("Initial RMS of Data Residuals: "+dataResRmsInit);
-      trace("Final RMS of Data Residuals: "+dataResRmsFina);
-      trace("Initial 2NormSq of All Residuals: "+allRes2NormSqInit);
-      trace("Final 2NormSq of All Residuals: "+allRes2NormSqFina);
-      trace("Initial 2NormSq of Data Residuals: "+dataRes2NormSqInit);
-      trace("Final 2NormSq of Data Residuals: "+dataRes2NormSqFina);
-      trace("Initial 2NormSq of b Penalty Residuals: "+bPenaltyRes2NormSqInit);
-      trace("Final 2NormSq of b Penalty Residuals: "+bPenaltyRes2NormSqFina);
-      trace("Initial 2NormSq of c Penalty Residuals: "+cPenaltyRes2NormSqInit);
-      trace("Final 2NormSq of c Penalty Residuals: "+cPenaltyRes2NormSqFina);
-      trace("Step Length: "+stepLength);
-      trace("Condition Number: "+_conditionNumberS[iter]);
-      trace("RMS Percent Change: "+rmsPercentChange);
-
-      //printB(bNew);
-      //printC(cNew);
-      //printDeltaB(deltab);
-      //printDeltaC(deltac);
+      calcAndStoreAllDiagnosticMeasures(stepLength,x,v,bNew,cNew,deltaB,deltaC,iter);
 
       //Update c and b to newest c and b for the next iteration.
       b = copy(bNew);
@@ -311,30 +181,29 @@ public class WaveletWarpingCBGN {
       _lastIter = iter;
 
       //Store c and b corresponding to smallest RMS of all residuals so far.
-      if (allResRmsFina<minAllResRmsFina) {
+      if (_allResRmsFina<minAllResRmsFina) {
         minIter = iter;
-        minAllResRmsFina = allResRmsFina;
+        minAllResRmsFina = _allResRmsFina;
         minC = c;
         minB = b;
       }
-      if (abs(rmsPercentChange)<_minRmsPercentChange) {
+      if (abs(_rmsPercentChange)<_minRmsPercentChange) {
         trace("iter = "+iter);
         trace("iter+1 = "+(iter+1));
-        _allResRmsAllS[iter] = allResRmsInit;
-        _allResRmsAllS[iter+1] = allResRmsFina;
-        _dataResRmsInitS[iter] = dataResRmsInit;
-        _dataResRmsFinaS[iter+1] = dataResRmsFina;
-        _dataRes2NormSqInitS[iter] = dataRes2NormSqInit;
-        trace("link _dataRes2NormSqInitS = "+_dataRes2NormSqInitS[iter]);
-        _dataRes2NormSqFinaS[iter+1] = dataRes2NormSqFina;
-        _bPenaltyRes2NormSqInitS[iter] = bPenaltyRes2NormSqInit;
-        _bPenaltyRes2NormSqFinaS[iter+1] = bPenaltyRes2NormSqFina;
-        _cPenaltyRes2NormSqInitS[iter] = cPenaltyRes2NormSqInit;
-        _cPenaltyRes2NormSqFinaS[iter+1] = cPenaltyRes2NormSqFina;
-        _allResRmsInitS[iter] = allResRmsInit;
-        _allResRmsFinaS[iter+1] = allResRmsFina;
-        _allRes2NormSqInitS[iter] = allRes2NormSqInit;
-        _allRes2NormSqFinaS[iter+1] = allRes2NormSqFina;
+        _allResRmsS[iter] = _allResRmsInit;
+        _allResRmsS[iter+1] = _allResRmsFina;
+        _dataResRmsS[iter] = _dataResRmsInit;
+        _dataResRmsS[iter+1] = _dataResRmsFina;
+        _dataRes2NormSqS[iter] = _dataRes2NormSqInit;
+        _dataRes2NormSqS[iter+1] = _dataRes2NormSqFina;
+        _bPenaltyRes2NormSqS[iter] = _bPenaltyRes2NormSqInit;
+        _bPenaltyRes2NormSqS[iter+1] = _bPenaltyRes2NormSqFina;
+        _cPenaltyRes2NormSqS[iter] = _cPenaltyRes2NormSqInit;
+        _cPenaltyRes2NormSqS[iter+1] = _cPenaltyRes2NormSqFina;
+        _allResRmsS[iter] = _allResRmsInit;
+        _allResRmsS[iter+1] = _allResRmsFina;
+        _allRes2NormSqS[iter] = _allRes2NormSqInit;
+        _allRes2NormSqS[iter+1] = _allRes2NormSqFina;
         _stepLengthS[iter] = stepLength;
         _conditionNumberS[iter] = (float)x.cond();
         _b2NormS[iter] = twoNorm(b);
@@ -344,12 +213,12 @@ public class WaveletWarpingCBGN {
         _gradient2NormS[iter] = twoNorm(v);
         _alphaBS[iter] = (float)_alphaB;
         _alphaCS[iter] = (float)_alphaC;
-        _rmsPercentChangeS[iter] = rmsPercentChange;
+        _rmsPercentChangeS[iter] = _rmsPercentChange;
         ++iter;
 
 
         if (_end == true) {
-          if (minAllResRmsFina<allResRmsFina) {
+          if (minAllResRmsFina<_allResRmsFina) {
             trace("Reverting back to iteration "+minIter+"."); 
             trace("Produced the smallest Rms of all residuals");
             _lastIter = minIter;
@@ -362,7 +231,7 @@ public class WaveletWarpingCBGN {
           trace("Stopped Iterating: Percent change is below"+
           " maximum percent change required for stopping");
           trace("Maximum percent change before stopping = "+_minRmsPercentChange);
-          trace("Percent change = "+rmsPercentChange);
+          trace("Percent change = "+_rmsPercentChange);
           trace("Penalize on b, solve for non-zero alpha");
           trace("link alphaB = "+_alphaB);
           solveForAlphaB(nb,kb,b,nc,kc,c,u,f,g,x,v,_scaleW);
@@ -383,13 +252,15 @@ public class WaveletWarpingCBGN {
         }
       }
     }
-    if (minAllResRmsFina<allResRmsFina) {
+    if (minAllResRmsFina<_allResRmsFina) {
       trace("Reverting back to iteration "+minIter+"."); 
       trace("Produced the smallest Rms of all residuals");
       return new float[][]{minC,minB};
     }
     return new float[][]{c,b};
   }
+
+  /*
   public float[][] getWaveletCInverseB(
     int nb, int kb, float[] bGuess, int nc, int kc, float[] cGuess,
     float[][] u, float[][] f, float[][] g, int niter)
@@ -703,6 +574,7 @@ public class WaveletWarpingCBGN {
 
     return new float[][]{c,b};
   }
+  */
 
   public int getLastIter() {
     trace("last iter = "+_lastIter);
@@ -816,50 +688,23 @@ public class WaveletWarpingCBGN {
     return convertDToF(h.getArray());
   }
 
-  public float[] getDataResRmsInitialS() {
-    return _dataResRmsInitS;
+  public float[] getDataResRmsS() {
+    return _dataResRmsS;
   }
-  public float[] getDataResRmsFinalS() {
-    return _dataResRmsFinaS;
+  public float[] getDataRes2NormSqS() {
+    return _dataRes2NormSqS;
   }
-
-  public float[] getDataRes2NormSqInitialS() {
-    return _dataRes2NormSqInitS;
+  public float[] getBPenaltyRes2NormSqS() {
+    return _bPenaltyRes2NormSqS;
   }
-  public float[] getDataRes2NormSqFinalS() {
-    return _dataRes2NormSqFinaS;
+  public float[] getCPenaltyRes2NormSqS() {
+    return _cPenaltyRes2NormSqS;
   }
-
-  public float[] getBPenaltyRes2NormSqInitialS() {
-    return _bPenaltyRes2NormSqInitS;
+  public float[] getAllResRmsS() {
+    return _allResRmsS;
   }
-  public float[] getBPenaltyRes2NormSqFinalS() {
-    return _bPenaltyRes2NormSqFinaS;
-  }
-
-  public float[] getCPenaltyRes2NormSqInitialS() {
-    return _cPenaltyRes2NormSqInitS;
-  }
-  public float[] getCPenaltyRes2NormSqFinalS() {
-    return _cPenaltyRes2NormSqFinaS;
-  }
-
-  public float[] getAllResRmsInitialS() {
-    return _allResRmsInitS;
-  }
-  public float[] getAllResRmsFinalS() {
-    return _allResRmsFinaS;
-  }
-  public float[] getAllResRmsAllS() {
-    dump(_allResRmsAllS);
-    return _allResRmsAllS;
-  }
-
-  public float[] getAllRes2NormSqInitialS() {
-    return _allRes2NormSqInitS;
-  }
-  public float[] getAllRes2NormSqFinalS() {
-    return _allRes2NormSqFinaS;
+  public float[] getAllRes2NormSqS() {
+    return _allRes2NormSqS;
   }
 
   public float[] getStepLengthS() {
@@ -894,10 +739,10 @@ public class WaveletWarpingCBGN {
     return _rmsPercentChangeS;
   }
 
-  public float[] getAlphaB() {
+  public float[] getAlphaBS() {
     return _alphaBS;
   }
-  public float[] getAlphaC() {
+  public float[] getAlphaCS() {
     return _alphaCS;
   }
   
@@ -1043,23 +888,48 @@ public class WaveletWarpingCBGN {
   private double _firstAll2NormSqTemp;
   private double _alphaBManualValue;
   private float _minRmsPercentChange = 0.000f;
+  private float _dataResRmsInit;
+  private float _dataResRmsFina;
+  private float _dataRes2NormSqInit;
+  private float _dataRes2NormSqFina;
+  private float _bPenaltyRes2NormSqInit;
+  private float _bPenaltyRes2NormSqFina;
+  private float _cPenaltyRes2NormSqInit;
+  private float _cPenaltyRes2NormSqFina;
+  private float _allResRmsInit;
+  private float _allResRmsFina;
+  private float _allRes2NormSqInit;
+  private float _allRes2NormSqFina;
+  private float _rmsPercentChange;
   private int _itmin = -1;
   private int _itmax = -1;
   private int _ng0 = 0;//staring size of array/image.
   private int _lastIter = 0;
+  private float[] _dataResInit;
+  private float[] _dataResFina;
+  private float[] _bPenaltyResInit;
+  private float[] _bPenaltyResFina;
+  private float[] _cPenaltyResInit;
+  private float[] _cPenaltyResFina;
   private float[] _dataResRmsInitS; 
   private float[] _dataResRmsFinaS; 
+  private float[] _dataResRmsS; 
   private float[] _dataRes2NormSqInitS;
   private float[] _dataRes2NormSqFinaS;
+  private float[] _dataRes2NormSqS;
   private float[] _bPenaltyRes2NormSqInitS;
   private float[] _bPenaltyRes2NormSqFinaS;
+  private float[] _bPenaltyRes2NormSqS;
   private float[] _cPenaltyRes2NormSqInitS;
   private float[] _cPenaltyRes2NormSqFinaS;
+  private float[] _cPenaltyRes2NormSqS;
   private float[] _allResRmsInitS;
   private float[] _allResRmsFinaS;
+  private float[] _allResRmsS;
   private float[] _allResRmsAllS;
   private float[] _allRes2NormSqInitS;
   private float[] _allRes2NormSqFinaS;
+  private float[] _allRes2NormSqS;
   private float[] _stepLengthS; 
   private float[] _conditionNumberS;
   private float[] _b2NormS;
@@ -2658,6 +2528,130 @@ public class WaveletWarpingCBGN {
     sp.addPixels(rf);
     sp.addTitle("Iteration = "+iter+" PercentChange = "+pc);
   }
+
+  private void computeAndStoreAllInitialResiduals(
+    int nc, int kc, float[] c, int nb, int kb, float[] b, 
+    float[] u, float[] f, float[] g)
+  {
+    _dataResInit = computeDataResidual(nc,kc,c,nb,kb,b,u,f,g);
+    _bPenaltyResInit = computeBPenaltyResidual(convertFToD(b),_wDiag);
+    _cPenaltyResInit = computeCPenaltyResidual(convertFToD(c),_zDiag);
+  }
+
+  private void computeAndStoreAllFinalResiduals(
+    int nc, int kc, float[] c, int nb, int kb, float[] b, 
+    float[] u, float[] f, float[] g)
+  {
+    _dataResFina = computeDataResidual(nc,kc,c,nb,kb,b,u,f,g);
+    _bPenaltyResFina = computeBPenaltyResidual(convertFToD(b),_wDiag);
+    _cPenaltyResFina = computeCPenaltyResidual(convertFToD(c),_zDiag);
+  }
+
+  private void computeAndStoreInitialMeasuresOfResiduals() 
+  {
+    _dataResRmsInit = rms(_dataResInit);
+    _dataRes2NormSqInit = (float) dot(_dataResInit,_dataResInit);
+    _bPenaltyRes2NormSqInit = (float) dotAll(_bPenaltyResInit,_bPenaltyResInit);
+    _cPenaltyRes2NormSqInit = (float) dotAll(_cPenaltyResInit,_cPenaltyResInit);
+    _allResRmsInit = rmsOfObjectiveFunction(_dataResInit,_bPenaltyResInit,_cPenaltyResInit);
+    _allRes2NormSqInit = _dataRes2NormSqInit+_bPenaltyRes2NormSqInit+_cPenaltyRes2NormSqInit;
+  }
+
+  private void computeAndStoreFinalMeasuresOfResiduals() 
+  {
+    _dataResRmsFina = rms(_dataResFina);
+    _dataRes2NormSqFina = (float) dot(_dataResFina,_dataResFina);
+    _bPenaltyRes2NormSqFina = (float) dotAll(_bPenaltyResFina,_bPenaltyResFina);
+    _cPenaltyRes2NormSqFina = (float) dotAll(_cPenaltyResFina,_cPenaltyResFina);
+    _allResRmsFina = rmsOfObjectiveFunction(_dataResFina,_bPenaltyResFina,_cPenaltyResFina);
+    _allRes2NormSqFina = _dataRes2NormSqFina+_bPenaltyRes2NormSqFina+_cPenaltyRes2NormSqFina;
+  }
+  private void computeAndStoreRMSPercentChange() {
+    _rmsPercentChange = percentChange(_allResRmsFina,_allResRmsInit);
+  }
+
+  private void initializeAllRequiredFields(int nb, int nc, int niter, float[] f){
+    int nt = f.length;
+
+    _dataResInit = new float[nt];
+    _bPenaltyResInit = new float[nb];
+    _cPenaltyResInit = new float[nc];
+    _dataResFina = new float[nt];
+    _bPenaltyResFina = new float[nb];
+    _cPenaltyResFina = new float[nc];
+
+    _dataResRmsS = new float[niter];//db
+    _dataRes2NormSqS = new float[niter];//db
+    _bPenaltyRes2NormSqS = new float[niter];//db
+    _cPenaltyRes2NormSqS = new float[niter];//db
+    _allResRmsS = new float[niter];//db
+    _allRes2NormSqS = new float[niter];//db
+    _allRes2NormSqInitS = new float[niter];//db
+    _alphaBS = new float[niter];
+    _alphaCS = new float[niter];
+
+    _stepLengthS = new float[niter];//db
+    _conditionNumberS = new float[niter];//db
+    _b2NormS = new float[niter];//db
+    _c2NormS = new float[niter];//db
+    _deltaB2NormS = new float[niter];//db
+    _deltaC2NormS = new float[niter];//db
+    _gradient2NormS = new float[niter];//db
+    _rmsPercentChangeS = new float[niter];//db
+
+    _dataResRmsInit = 0.0f;
+    _dataResRmsFina = 0.0f;
+    _dataRes2NormSqInit = 0.0f;
+    _dataRes2NormSqFina = 0.0f;
+    _bPenaltyRes2NormSqInit = 0.0f;
+    _bPenaltyRes2NormSqFina = 0.0f;
+    _cPenaltyRes2NormSqInit = 0.0f;
+    _cPenaltyRes2NormSqFina = 0.0f;
+    _allResRmsInit = 0.0f;
+    _allResRmsFina = 0.0f;
+    _allRes2NormSqInit = 0.0f;
+    _allRes2NormSqFina = 0.0f;
+    _rmsPercentChange = 0.0f;
+
+    _zDiag= new double[nc];
+    _wDiag = new double[nb];
+    _alphaB = 0.0;
+    _alphaC = 0.0;
+    _scaleW = sqrt(dot(f,f));
+    _scaleZ = sqrt(dot(f,f));
+  }
+
+private void calcAndStoreAllDiagnosticMeasures(
+  float stepLength, DMatrix x, DMatrix v,
+  float[] b, float[] c, float[] deltaB, float[] deltaC, int iter)
+{
+  _allResRmsS[iter] = _allResRmsInit;
+  _allRes2NormSqS[iter] = _allRes2NormSqInit;
+  _dataResRmsS[iter] = _dataResRmsInit;
+  _dataRes2NormSqS[iter] = _dataRes2NormSqInit;
+  _bPenaltyRes2NormSqS[iter] = _bPenaltyRes2NormSqInit;
+  _cPenaltyRes2NormSqS[iter] = _cPenaltyRes2NormSqInit;
+  _allResRmsS[iter+1] = _allResRmsFina;
+  _allRes2NormSqS[iter+1] = _allRes2NormSqFina;
+  _dataResRmsS[iter+1] = _dataResRmsFina;
+  _dataRes2NormSqS[iter+1] = _dataRes2NormSqFina;
+  _bPenaltyRes2NormSqS[iter+1] = _bPenaltyRes2NormSqFina;
+  _cPenaltyRes2NormSqS[iter+1] = _cPenaltyRes2NormSqFina;
+  _alphaBS[iter+1] = (float) _alphaB;
+  _alphaCS[iter+1] = (float) _alphaC;
+  _rmsPercentChangeS[iter+1] = _rmsPercentChange;
+  _stepLengthS[iter+1] = stepLength;
+
+  _conditionNumberS[iter+1] = (float) x.cond();
+  _b2NormS[iter+1] = twoNorm(b);
+  _c2NormS[iter+1] = twoNorm(c);
+  _deltaB2NormS[iter+1] = twoNorm(deltaB);
+  _deltaC2NormS[iter+1] = twoNorm(deltaC);
+  _gradient2NormS[iter+1] = twoNorm(v);
+}
+
+
+
 
   private static void trace(String s) {
     System.out.println(s);

@@ -7,7 +7,7 @@ from edu.mines.jtk.dsp.Conv import *
 from edu.mines.jtk.sgl import *
 from edu.mines.jtk.awt.ColorMap import *
 from edu.mines.jtk.lapack import *
-from wwarp import WaveletWarpingCBGN, WaveletWarpingCBCyclic, WaveletWarpingCA, Warper, Start
+from wwarp import WaveletWarpingCBGN, WaveletWarpingCBCyclic, WaveletWarpingCA, Warper
 from wwarp import AmpSpectrum 
 import synthetic
 import plotting
@@ -23,7 +23,7 @@ def main(args):
   #estimateOneWavelet2t()
   #estimateOneWaveletlnt()
   #estimateTwoWaveletsCycliclnt()
-  #estimateTwoWaveletsGNlnt()
+  estimateTwoWaveletsGNlnt()
   #estimateTwoWaveletsNoiseLowSqueezingCycliclnt()
   #estimateTwoWaveletsNoiseLowSqueezingGNlnt()
   #increaseBy1GNNoise()
@@ -32,7 +32,7 @@ def main(args):
   #increaseBy1PreviousSolutionCyclicNoise()
   #noiseComparisonGN()
   #noiseComparisonCyclic()
-  goSinopecGN()
+  #goSinopecGN()
   #goSinopecCyclic()
   #goGBCGN()
 
@@ -991,7 +991,24 @@ def estimateTwoWaveletsGNlnt():
   cbw = ww.getWaveletCInverseB(nb,kb,bguess,nc,kc,cguess,u,f,g,niter)
   lastIter = ww.getLastIter()
   print "lastIter = "+str(lastIter)
-  allResRmsAllS = ww.getAllResRmsAllS()
+  allResRmsAllS = ww.getAllResRmsS()
+  print "1 = "+str(ww.getAllResRmsS()[niter-1])
+  print "1 = "+str(ww.getAllRes2NormSqS()[niter-1])
+  print "1 = "+str(ww.getDataResRmsS()[niter-1])
+  print "1 = "+str(ww.getDataRes2NormSqS()[niter-1])
+  print "1 = "+str(ww.getBPenaltyRes2NormSqS()[niter-1])
+  print "1 = "+str(ww.getCPenaltyRes2NormSqS()[niter-1])
+  print "1 = "+str(ww.getStepLengthS()[niter-1])
+  print "1 = "+str(ww.getConditionNumberS()[niter-1])
+  print "1 = "+str(ww.getB2NormS()[niter-1])
+  print "1 = "+str(ww.getC2NormS()[niter-1])
+  print "1 = "+str(ww.getDeltaB2NormS()[niter-1])
+  print "1 = "+str(ww.getDeltaC2NormS()[niter-1])
+  print "1 = "+str(ww.getGradient2NormS()[niter-1])
+  print "1 = "+str(ww.getRmsPercentChangeS()[niter-1])
+  print "1 = "+str(ww.getAlphaBS()[niter-1])
+  print "1 = "+str(ww.getAlphaCS()[niter-1])
+
   #Estimated Wavelets
   cw = cbw[0]
   bw = cbw[1]
@@ -1038,7 +1055,8 @@ def estimateTwoWaveletsGNlnt():
 
  #Plotting
   #############1 Plot######################################
-  directory = "./thesisFigures/3pt4/"
+  #directory = "./thesisFigures/3pt4/"
+  directory = None
   #pngDir = None
   pngDir = directory
   dt = 0.004
@@ -1152,7 +1170,7 @@ def estimateTwoWaveletsNoiseLowSqueezingCycliclnt():
   #Synthetic parameters
   nt,ni,randomi = 581,30,True# number of time samples in p and q; number of random impulses in p and q.
   moreps = True 
-  r0,r1 = 1.6,1.4
+  r0,r1 = 1.8,1.55
   v = 0.0#The amount of shift between p and q.
   freqc,decayc = 0.16,0.07
   freqd,decayd = 0.08,0.07
@@ -1355,7 +1373,7 @@ def estimateTwoWaveletsNoiseLowSqueezingGNlnt():
   #Synthetic parameters
   nt,ni,randomi = 581,30,True# number of time samples in p and q; number of random impulses in p and q.
   moreps = True 
-  r0,r1 = 1.6,1.4
+  r0,r1 = 3.0,1.4
   v = 0.0#The amount of shift between p and q.
   freqc,decayc = 0.16,0.07
   freqd,decayd = 0.08,0.07
@@ -2392,9 +2410,30 @@ def goSinopecGN():
   #get sino images
   x0,nx = 260,100
   f,gNoNR,u = getSinoImage(x0,nx)
+  nt = len(u[0])
   du = computeBackDiff2D(u)
-  SimplePlot.asPixels(u)
-  SimplePlot.asPixels(du)
+  mindu = 10000000
+  maxdu = -10000000
+  maxit = 0
+  minit = 0
+  maxix = 0
+  minix = 0
+  for ix in range(0,nx):
+    for it in range(1,nt):
+      if (mindu>du[ix][it]):
+        mindu = du[ix][it]
+        minit = it
+        minix = ix
+      if (maxdu<du[ix][it]):
+        maxdu = du[ix][it]
+        maxit = it
+        maxix = ix
+  print "minit = "+str(minit)
+  print "minix = "+str(minix)
+  print "maxit = "+str(maxit)
+  print "maxix = "+str(maxix)
+  print "mindu = "+str(mindu)
+  print "maxdu = "+str(maxdu)
 
   #halfwidth = 0
   halfwidth = 2
@@ -2644,7 +2683,7 @@ def goSinopecGN():
   hlabel = ["Distance (km)"]
   hminmax = None
   hint = 0.25
-  clipmin,clipmax = 1.3,1.7
+  clipmin,clipmax = 1.3,2.7
   tilespacing = None
   clip = 3.0
   plotting.plotImagesSideBySideDU(st,sx,[du],\

@@ -362,7 +362,7 @@ public class WaveletWarpingCA {
       dfi = delay(lagi,f);
       sdgi = warp.applyS(u,delay(lagi,g));
       di = sub(sdgi,dfi);
-      d[ia] = applyB(di);
+      d[ia] = applyBandPassFilter(di);
     }
     return d;
   }
