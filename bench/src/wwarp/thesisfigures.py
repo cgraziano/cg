@@ -7,7 +7,7 @@ from edu.mines.jtk.dsp.Conv import *
 from edu.mines.jtk.sgl import *
 from edu.mines.jtk.awt.ColorMap import *
 from edu.mines.jtk.lapack import *
-from wwarp import WaveletWarpingCBGN, WaveletWarpingCBCyclic, WaveletWarpingCA, Warper
+from wwarp import WaveletWarpingCBGN, WaveletWarpingCBCyclic, WaveletWarpingCBCyclicOriginal, WaveletWarpingCA, Warper
 from wwarp import AmpSpectrum 
 import synthetic
 import plotting
@@ -23,8 +23,8 @@ def main(args):
   #estimateOneWavelet2t()
   #estimateOneWaveletlnt()
   #estimateTwoWaveletsCycliclnt()
-  estimateTwoWaveletsGNlnt()
-  #estimateTwoWaveletsNoiseLowSqueezingCycliclnt()
+  #estimateTwoWaveletsGNlnt()
+  estimateTwoWaveletsNoiseLowSqueezingCycliclnt()
   #estimateTwoWaveletsNoiseLowSqueezingGNlnt()
   #increaseBy1GNNoise()
   #increaseBy1PreviousSolutionGNNoise()
@@ -789,7 +789,7 @@ def estimateTwoWaveletsCycliclnt():
   cbw = ww.getWaveletCInverseB(nb,kb,bguess,nc,kc,cguess,u,f,g,niter)
   lastIter = ww.getLastIter()
   print "lastIter = "+str(lastIter)
-  allResRmsAllS = ww.getAllResRmsAllS()
+  allResRmsAllS = ww.getAllResRmsS()
   #Estimated Wavelets
   cw = cbw[0]
   bw = cbw[1]
@@ -1170,7 +1170,7 @@ def estimateTwoWaveletsNoiseLowSqueezingCycliclnt():
   #Synthetic parameters
   nt,ni,randomi = 581,30,True# number of time samples in p and q; number of random impulses in p and q.
   moreps = True 
-  r0,r1 = 1.8,1.55
+  r0,r1 = 3.0,1.4
   v = 0.0#The amount of shift between p and q.
   freqc,decayc = 0.16,0.07
   freqd,decayd = 0.08,0.07
@@ -1196,10 +1196,10 @@ def estimateTwoWaveletsNoiseLowSqueezingCycliclnt():
 
   #Estimate wavelet
   niter = 500
-  ww = WaveletWarpingCBCyclic()
+  ww = WaveletWarpingCBCyclicOriginal()
   ww.setMinPercentChange(0.01)
   ww.setTimeRange(tmin,tmax)
-  ww.setStabilityFactor(0.000)
+  ww.setStabilityFactor(sfac)
   #First guesses of c and b. 
   bone = zerofloat(nb)
   bone[-kb] = 1.0
@@ -1211,7 +1211,7 @@ def estimateTwoWaveletsNoiseLowSqueezingCycliclnt():
   cbw = ww.getWaveletCInverseB(nb,kb,bguess,nc,kc,cguess,u,f,g,niter)
   lastIter = ww.getLastIter()
   print "lastIter = "+str(lastIter)
-  allResRmsAllS = ww.getAllResRmsAllS()
+  allResRmsAllS = ww.getAllResRmsS()
   #Estimated Wavelets
   cw = cbw[0]
   bw = cbw[1]
@@ -1373,7 +1373,7 @@ def estimateTwoWaveletsNoiseLowSqueezingGNlnt():
   #Synthetic parameters
   nt,ni,randomi = 581,30,True# number of time samples in p and q; number of random impulses in p and q.
   moreps = True 
-  r0,r1 = 3.0,1.4
+  r0,r1 = 1.01,1.0
   v = 0.0#The amount of shift between p and q.
   freqc,decayc = 0.16,0.07
   freqd,decayd = 0.08,0.07
@@ -1414,7 +1414,7 @@ def estimateTwoWaveletsNoiseLowSqueezingGNlnt():
   cbw = ww.getWaveletCInverseB(nb,kb,bguess,nc,kc,cguess,u,f,g,niter)
   lastIter = ww.getLastIter()
   print "lastIter = "+str(lastIter)
-  allResRmsAllS = ww.getAllResRmsAllS()
+  allResRmsAllS = ww.getAllResRmsS()
   #Estimated Wavelets
   cw = cbw[0]
   bw = cbw[1]
@@ -1572,7 +1572,6 @@ def estimateTwoWaveletsNoiseLowSqueezingGNlnt():
   st = Sampling(nc,dt,kc*dti)
   plotting.plotWavelets(st,[ndw,ndk],hint=hint,hsize=hsize,vsize=vsize,linestyle=lineStyle,title=title,pngDir=pngDir,paper=True,twocol=True)
 
-
 def increaseBy1GNNoise():
   directory = "./thesisFigures/3pt5/"
   #Synthetic parameters
@@ -1638,7 +1637,7 @@ def increaseBy1GNNoise():
 
     #Get iteration information
     lastIter = ww.getLastIter()
-    allResRmsAllS = ww.getAllResRmsAllS()
+    allResRmsAllS = ww.getAllResRmsS()
     allRmsResCB[i] = allResRmsAllS[lastIter]
     warp = Warper()
     sg = warp.applyS(u,g)
@@ -1744,7 +1743,7 @@ def increaseBy1PreviousSolutionGNNoise():
 
     #Get iteration information
     lastIter = ww.getLastIter()
-    allResRmsAllS = ww.getAllResRmsAllS()
+    allResRmsAllS = ww.getAllResRmsS()
     allRmsResCB[i] = allResRmsAllS[lastIter]
     warp = Warper()
     sg = warp.applyS(u,g)
@@ -1845,7 +1844,7 @@ def increaseBy1CyclicNoise():
 
     #Get iteration information
     lastIter = ww.getLastIter()
-    allResRmsAllS = ww.getAllResRmsAllS()
+    allResRmsAllS = ww.getAllResRmsS()
     allRmsResCB[i] = allResRmsAllS[lastIter]
     warp = Warper()
     sg = warp.applyS(u,g)
@@ -1951,7 +1950,7 @@ def increaseBy1PreviousSolutionCyclicNoise():
 
     #Get iteration information
     lastIter = ww.getLastIter()
-    allResRmsAllS = ww.getAllResRmsAllS()
+    allResRmsAllS = ww.getAllResRmsS()
     allRmsResCB[i] = allResRmsAllS[lastIter]
     warp = Warper()
     sg = warp.applyS(u,g)
@@ -2054,7 +2053,7 @@ def noiseComparisonGN():
     cbw = ww.getWaveletCInverseB(nb,kb,bguess,nc,kc,cguess,u,f,g,niter)
     lastIter = ww.getLastIter()
     print "lastIter = "+str(lastIter)
-    allResRmsAllS = ww.getAllResRmsAllS()
+    allResRmsAllS = ww.getAllResRmsS()
     rmsNoise[i] = allResRmsAllS[lastIter]
     #Estimated Wavelets
     cw = cbw[0]
@@ -2260,7 +2259,7 @@ def noiseComparisonCyclic():
     cbw = ww.getWaveletCInverseB(nb,kb,bguess,nc,kc,cguess,u,f,g,niter)
     lastIter = ww.getLastIter()
     print "lastIter = "+str(lastIter)
-    allResRmsAllS = ww.getAllResRmsAllS()
+    allResRmsAllS = ww.getAllResRmsS()
     rmsNoise[i] = allResRmsAllS[lastIter]
     #Estimated Wavelets
     cw = cbw[0]
@@ -2494,7 +2493,7 @@ def goSinopecGN():
   bPenaltyRes2NormSqFinaS = ww.getBPenaltyRes2NormSqFinalS()
   cPenaltyRes2NormSqInitS = ww.getCPenaltyRes2NormSqInitialS()
   cPenaltyRes2NormSqFinaS = ww.getCPenaltyRes2NormSqFinalS()
-  allResRmsAllS = ww.getAllResRmsAllS()
+  allResRmsAllS = ww.getAllResRmsS()
   allResRmsInitS = ww.getAllResRmsInitialS()
   allResRmsFinaS = ww.getAllResRmsFinalS()
   allRes2NormSqInitS = ww.getAllRes2NormSqInitialS()
@@ -2908,7 +2907,7 @@ def goSinopecCyclic():
   cbw = ww.getWaveletCInverseB(nb,kb,bguess,nc,kc,cguess,u,f,g,niter)
   lastIter = ww.getLastIter()
   print "lastIter = "+str(lastIter)
-  allResRmsAllS = ww.getAllResRmsAllS()
+  allResRmsAllS = ww.getAllResRmsS()
   #Estimated Wavelets
   cw = cbw[0]
   bw = cbw[1]
@@ -3322,7 +3321,7 @@ def goGBCGN():
   bPenaltyRes2NormSqFinaS = ww.getBPenaltyRes2NormSqFinalS()
   cPenaltyRes2NormSqInitS = ww.getCPenaltyRes2NormSqInitialS()
   cPenaltyRes2NormSqFinaS = ww.getCPenaltyRes2NormSqFinalS()
-  allResRmsAllS = ww.getAllResRmsAllS()
+  allResRmsAllS = ww.getAllResRmsS()
   allResRmsInitS = ww.getAllResRmsInitialS()
   allResRmsFinaS = ww.getAllResRmsFinalS()
   allRes2NormSqInitS = ww.getAllRes2NormSqInitialS()

@@ -31,7 +31,7 @@ import static edu.mines.jtk.util.ArrayMath.*;
  * @version 2014.09.08
  */
 
-public class WaveletWarpingCBCyclic {
+public class WaveletWarpingCBCyclicOriginal {
   /**
    * Sets the min-max range of times used to estimate wavelet.
    * @param itmin minimum time, in samples.
@@ -127,7 +127,7 @@ public class WaveletWarpingCBCyclic {
    * @param niter the maximum number of iterations.
    * @return array of coefficients for the inverse wavelet a.   
    */
-  public float[][] getWaveletCInverseB(
+  /*public float[][] getWaveletCInverseB(
     int nb, int kb, float[] bGuess, int nc, int kc, float[] cGuess, 
     float[][] u, float[][] f, float[][] g, int niter)
   {
@@ -159,7 +159,7 @@ public class WaveletWarpingCBCyclic {
       }
     }
     return new float[][]{c,b};
-  }
+  }*/
  
   /**
    * Given an estimate of c, can solve for the inverse wavelet b.
@@ -304,41 +304,20 @@ public class WaveletWarpingCBCyclic {
 
     // Sequence q = SBg.
     float[] bg = applyC(nb,kb,b,g);
-    float[] q0 = warp.applyS(u,bg);
+    float[] q = warp.applyS(u,bg);
 
-    //Q'Q
-    DMatrix qq = new DMatrix(nc,nc);
-    for (int ic=0,lagi=kc; ic<nc; ++ic,++lagi) {
-      float[] qi = delay(lagi,q0);
-      for (int jc=0,lagj=kc; jc<nc; ++jc,++lagj) {
-        float[] qj = delay(lagj,q0);
-        double qiqj = dot(qi,qj);
-        qq.set(ic,jc,qiqj);
-        if (ic==jc)
-          qq.set(ic,jc,((1.0+stabFact)*qq.get(ic,jc)));
-      }
-    }
-    //Q'f
-    DMatrix qf = new DMatrix(nc,1);
-    for (int ic=0,lagi=kc; ic<nc; ++ic,++lagi) {
-      float[] qi = delay(lagi,q0);
-      double qif = dot(qi,f);
-      qf.set(ic,0,qif);
-    }
-    float[] cqq = new float[nc];
+    // Autocorrelation Q'Q and crosscorrelation Q'f.
     float[] cqf = new float[nc];
-    for (int i=0; i<nc; ++i) {
-      cqq[i] = (float) qq.get(i,0);
-      cqf[i] = (float) qf.get(i,0);
-    }
+    float[] cqq = new float[nc];
+    int mt = (0<=_itmin && _itmin<_itmax && _itmax<nt)?1+_itmax-_itmin:nt;
+    f = copy(mt,_itmin,f);
+    q = copy(mt,_itmin,q);
+    xcor(mt,0,q,mt,0,f,nc,kc,cqf);
+    xcor(mt,0,q,mt,0,q,nc, 0,cqq);
+
     // Solve for wavelet C.
     SymmetricToeplitzFMatrix stm = new SymmetricToeplitzFMatrix(cqq);
     return stm.solve(cqf);
-
-    // Solve for wavelet C.
-    //DMatrixChd chd = new DMatrixChd(qq);
-    //DMatrix h = chd.solve(qf);
-    //return convertDToF(h.getArray());
   }
   public float[] getWaveletC(
     int nc, int kc, int nb, int kb, float[] b, double stabFact,
