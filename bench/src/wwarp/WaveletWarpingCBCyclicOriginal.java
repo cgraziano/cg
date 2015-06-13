@@ -80,37 +80,56 @@ public class WaveletWarpingCBCyclicOriginal {
     int nb, int kb, float[] bGuess, int nc, int kc, float[] cGuess, 
     float[] u, float[] f, float[] g, int niter)
   {
-    float[] c = copy(cGuess);
-    trace("cGuess");
-    dump(cGuess);
-    float[] b = copy(bGuess);
-    _allResRmsAllS = new float[niter];
-    float[] dataResInit = computeDataResidual(nc,kc,c,nb,kb,b,u,f,g);
-    float[] bPenaltyResInit = new float[nb];
-    float[] cPenaltyResInit = new float[nc];
-    _allResRmsAllS[0] = rmsOfObjectiveFunction(dataResInit,bPenaltyResInit,cPenaltyResInit);
-    trace("allResRmsAllS0 = "+_allResRmsAllS[0]);
+    checkArguments(nb,kb,nc,kc);
+    initializeAllRequiredFields(f,niter,nb,nc);
+    setCAndB(cGuess,bGuess);
 
-    for (int iter=1; iter<niter; ++iter) {
+    for (int iter=0; iter<niter; ++iter) 
+    {
       trace("iteration = "+iter);
-      b = getInverseB(nb,kb,nc,kc,c,u,f,g);
-      trace("in between rms residuals with b and previous c");
-      trace("rms = "+rmsOfObjectiveFunction(computeDataResidual(nc,kc,c,nb,kb,b,u,f,g),bPenaltyResInit,cPenaltyResInit));
-      c = getWaveletC(nc,kc,nb,kb,b,_sfac,u,f,g);
-      
-      dataResInit = computeDataResidual(nc,kc,c,nb,kb,b,u,f,g);
-      _allResRmsAllS[iter] = rmsOfObjectiveFunction(dataResInit,bPenaltyResInit,cPenaltyResInit);
-      trace("allResRmsAllSiter = "+_allResRmsAllS[iter]);
-      float rmsPercentChange = percentChange(_allResRmsAllS[iter],_allResRmsAllS[iter-1]);
-      trace("rmsPercentChange = "+rmsPercentChange);
+      computeAndStoreAllInitialResiduals(nc,kc,_c,nb,kb,_b,u,f,g);
+      computeAndStoreInitialMeasuresOfResiduals(_dataResInit1D,_bPenaltyResInit,_cPenaltyResInit);
+      _b = getInverseB(nb,kb,nc,kc,_c,u,f,g);
+      _c = getWaveletC(nc,kc,nb,kb,_b,_sfac,u,f,g);
+      computeAndStoreAllFinalResiduals(nc,kc,_c,nb,kb,_b,u,f,g);
+      computeAndStoreFinalMeasuresOfResiduals(_dataResFina1D,_bPenaltyResInit,_cPenaltyResFina);
+      calcAndStoreAllDiagnosticMeasures(iter);
       _lastIter = iter;
-      if (abs(rmsPercentChange)<_minRmsPercentChange) {
-        return new float[][]{c,b};
+      if (isRmsPercentChangeSmallerThanMinimumPercentChange())
+      {
+        return new float[][]{_c,_b};
       }
     }
-    return new float[][]{c,b};
+    return new float[][]{_c,_b};
+  }
+  public float[][] getWaveletCInverseB(
+    int nb, int kb, float[] bGuess, int nc, int kc, float[] cGuess, 
+    float[][] u, float[][] f, float[][] g, int niter)
+  {
+    checkArguments(nb,kb,nc,kc);
+    initializeAllRequiredFields(f,niter,nb,nc);
+    setCAndB(cGuess,bGuess);
+
+    for (int iter=0; iter<niter; ++iter) 
+    {
+      trace("iteration = "+iter);
+      computeAndStoreAllInitialResiduals(nc,kc,_c,nb,kb,_b,u,f,g);
+      computeAndStoreInitialMeasuresOfResiduals(_dataResInit2D,_bPenaltyResInit,_cPenaltyResInit);
+      _b = getInverseB(nb,kb,nc,kc,_c,u,f,g);
+      _c = getWaveletC(nc,kc,nb,kb,_b,_sfac,u,f,g);
+      computeAndStoreAllFinalResiduals(nc,kc,_c,nb,kb,_b,u,f,g);
+      computeAndStoreFinalMeasuresOfResiduals(_dataResFina2D,_bPenaltyResInit,_cPenaltyResFina);
+      calcAndStoreAllDiagnosticMeasures(iter);
+      _lastIter = iter;
+      if (isRmsPercentChangeSmallerThanMinimumPercentChange())
+      {
+        return new float[][]{_c,_b};
+      }
+    }
+    return new float[][]{_c,_b};
   }
 
+  
 
   /**
    * Estimates the wavelet c and the inverse wavelet b using a cyclic search.
@@ -513,16 +532,29 @@ public class WaveletWarpingCBCyclicOriginal {
     return _lastIter;
   }
 
-
-
-
-  //Private
+  //Private 
   private double _sfac = 0.0;
   private int _itmin = -1;
   private int _itmax = -1;
   private int _lastIter = 0;
-  private float[] _allResRmsAllS;
+  private float _allResRmsInit;
+  private float _allResRmsFina;
   private float _minRmsPercentChange;
+  private float _rmsPercentChange;
+  private float[] _rmsPercentChangeS;
+  private float[] _allResRmsAllS;
+  private float[] _c;
+  private float[] _b;
+  private float[] _bPenaltyResInit;
+  private float[] _bPenaltyResFina;
+  private float[] _cPenaltyResInit;
+  private float[] _cPenaltyResFina;
+  private float[] _dataResInit1D;
+  private float[] _dataResFina1D;
+  private float[][] _dataResInit2D;
+  private float[][] _dataResFina2D;
+  private float[][][] _dataResInit3D;
+  private float[][][] _dataResFina3D;
 
 
   private double dot(float[] x, float[] y) {
@@ -633,15 +665,13 @@ public class WaveletWarpingCBCyclicOriginal {
    float[] u, float[] f, float[] g) 
   {
     Warper warp = new Warper();
-    float[] csbg = applyC(nc,kc,c,warp.applyS(u,applyC(nb,kb,b,g)));
-    return sub(csbg,f);
+    return sub(applyC(nc,kc,c,warp.applyS(u,applyC(nb,kb,b,g))),f);
   }
   private float[][] computeDataResidual(int nc, int kc, float[] c, int nb, int kb, float[] b,
     float[][] u, float[][] f, float[][] g) 
   {
     Warper warp = new Warper();
-    float[][] csbg = applyC(nc,kc,c,warp.applyS(u,applyC(nb,kb,b,g)));
-    return sub(csbg,f);
+    return sub(applyC(nc,kc,c,warp.applyS(u,applyC(nb,kb,b,g))),f);
   }
   private float percentChange(float xf, float xi) {
     return (xf-xi)/xi*100.0f;
@@ -672,6 +702,110 @@ public class WaveletWarpingCBCyclicOriginal {
         f[i2][i1] = (float) d[i2][i1];
     return f;
   }
+
+  private boolean isRmsPercentChangeSmallerThanMinimumPercentChange() {
+    return abs(_rmsPercentChange)<_minRmsPercentChange;
+  }
+
+  private void calcAndStoreAllDiagnosticMeasures(int iter) {
+    _allResRmsAllS[iter] = _allResRmsInit;
+    _allResRmsAllS[iter+1] = _allResRmsFina;
+    if (iter==0) 
+    {
+      _rmsPercentChange = 0.0f;
+    }
+    else
+    {
+      _rmsPercentChange = percentChange(_allResRmsAllS[iter],_allResRmsAllS[iter-1]);
+    }
+    trace("_rmsPercentChangeS[iter+1] = "+_rmsPercentChangeS[iter]);
+    _rmsPercentChangeS[iter] = _rmsPercentChange;
+  }
+
+
+  private void computeAndStoreInitialMeasuresOfResiduals(float[] dataResInit1D, float[] bPenaltyResInit, float[] cPenaltyResInit) 
+  {
+    _allResRmsInit = rmsOfObjectiveFunction(dataResInit1D,bPenaltyResInit,cPenaltyResInit);
+  }
+  private void computeAndStoreInitialMeasuresOfResiduals(float[][] dataResInit1D, float[] bPenaltyResInit, float[] cPenaltyResInit) 
+  {
+    _allResRmsInit = rmsOfObjectiveFunction(dataResInit1D,bPenaltyResInit,cPenaltyResInit);
+  }
+  private void computeAndStoreFinalMeasuresOfResiduals(float[] dataResFina1D, float[] bPenaltyResFina, float[] cPenaltyResFina) 
+  {
+    _allResRmsFina = rmsOfObjectiveFunction(dataResFina1D,bPenaltyResFina,cPenaltyResFina);
+  }
+  private void computeAndStoreFinalMeasuresOfResiduals(float[][] dataResFina1D, float[] bPenaltyResFina, float[] cPenaltyResFina) 
+  {
+    _allResRmsFina = rmsOfObjectiveFunction(dataResFina1D,bPenaltyResFina,cPenaltyResFina);
+  }
+
+  private void checkArguments(int nb, int kb, int nc, int kc) {
+    Check.argument(-nb<kb,"-nb<kb");
+    Check.argument(kb<=0,"kb<=0");
+    Check.argument(-nc<kc,"-nc<kc");
+    Check.argument(kc<=0,"kc<=0");
+  }
+
+  private void initializeAllRequiredFields(float[] f, int niter, int nb, int nc) {
+    int nt = f.length;
+    _allResRmsAllS = new float[niter+1];
+    _rmsPercentChangeS = new float[niter+1];
+    _b = new float[nb];
+    _c = new float[nc];
+    _bPenaltyResInit = new float[nb];
+    _cPenaltyResInit = new float[nc];
+    _bPenaltyResFina = new float[nb];
+    _cPenaltyResFina = new float[nc];
+    _dataResInit1D = new float[nt];
+    _dataResFina1D = new float[nt];
+  }
+  private void initializeAllRequiredFields(float[][] f, int niter, int nb, int nc) {
+    int nx2 = f.length;
+    int nt = f[0].length;
+    _allResRmsAllS = new float[niter+1];
+    _rmsPercentChangeS = new float[niter+1];
+    _b = new float[nb];
+    _c = new float[nc];
+    _bPenaltyResInit = new float[nb];
+    _cPenaltyResInit = new float[nc];
+    _bPenaltyResFina = new float[nb];
+    _cPenaltyResFina = new float[nc];
+    _dataResInit2D = new float[nx2][nt];
+    _dataResFina2D = new float[nx2][nt];
+  }
+
+  private void setCAndB(float[] c, float[] b){
+    _c = copy(c);
+    _b = copy(b);
+  }
+
+  private void computeAndStoreAllInitialResiduals(
+      int nc, int kc, float[] c, int nb, int kb, float[] b, 
+      float[] u, float[] f, float[] g)
+  {
+    _dataResInit1D = computeDataResidual(nc,kc,c,nb,kb,b,u,f,g);
+  }
+  private void computeAndStoreAllInitialResiduals(
+      int nc, int kc, float[] c, int nb, int kb, float[] b, 
+      float[][] u, float[][] f, float[][] g)
+  {
+    _dataResInit2D = computeDataResidual(nc,kc,c,nb,kb,b,u,f,g);
+  }
+
+  private void computeAndStoreAllFinalResiduals(
+      int nc, int kc, float[] c, int nb, int kb, float[] b, 
+      float[] u, float[] f, float[] g)
+  {
+    _dataResFina1D = computeDataResidual(nc,kc,c,nb,kb,b,u,f,g);
+  }
+  private void computeAndStoreAllFinalResiduals(
+      int nc, int kc, float[] c, int nb, int kb, float[] b, 
+      float[][] u, float[][] f, float[][] g)
+  {
+    _dataResFina2D = computeDataResidual(nc,kc,c,nb,kb,b,u,f,g);
+  }
+
 
 
   
