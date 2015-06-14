@@ -61,6 +61,37 @@ public class ShapingFilter {
     return stm.solve(cxySum);
   }
 
+  public static float[] design(
+    int nh, int kh, 
+    int nx1, int kx, float[][][] x, 
+    int ny1, int ky, float[][][] y) 
+  {
+    int nx2 = x[0].length;
+    int nx3 = x.length;
+    float[] cxx = new float[nh];
+    float[] cxy = new float[nh];
+    float[] cxxSum = new float[nh];
+    float[] cxySum = new float[nh];
+    for (int ix3=0; ix3<nx3; ++ix3) {
+      for (int ix2=0; ix2<nx2; ++ix2) {
+        xcor(nx1,kx,x[ix3][ix2],nx1,kx,x[ix3][ix2],nh, 0,cxx);
+        //cxx[0] *= 1.0001;
+        xcor(nx1,kx,x[ix3][ix2],ny1,ky,y[ix3][ix2],nh,kh,cxy);
+        cxxSum = add(cxxSum,cxx);
+        cxySum = add(cxySum,cxy);
+      }
+    }
+    float cxxMax = max(cxxSum);
+    float cxyMax = max(cxySum);
+    float max = max(cxxMax,cxyMax);
+
+    cxxSum = div(cxxSum,max);
+    cxySum = div(cxySum,max);
+    SymmetricToeplitzFMatrix stm = new SymmetricToeplitzFMatrix(cxxSum);
+    return stm.solve(cxySum);
+  }
+
+
   ///////////////////////////////////////////////////////////////////////////
   // testing
   public static void main(String[] args) {

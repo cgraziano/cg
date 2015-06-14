@@ -708,18 +708,23 @@ public class WaveletWarpingCBCyclicOriginal {
   }
 
   private void calcAndStoreAllDiagnosticMeasures(int iter) {
+    trace("_allResRmsInit = "+_allResRmsInit);
+    trace("_allResRmsFina = "+_allResRmsFina);
     _allResRmsAllS[iter] = _allResRmsInit;
     _allResRmsAllS[iter+1] = _allResRmsFina;
+    dump(_allResRmsAllS);
+    dump(_rmsPercentChangeS);
     if (iter==0) 
     {
-      _rmsPercentChange = 0.0f;
+      _rmsPercentChangeS[0] = 0.0f;
+      _rmsPercentChange = percentChange(_allResRmsAllS[iter+1],_allResRmsAllS[iter]);
+      _rmsPercentChangeS[iter+1] = _rmsPercentChange;
     }
     else
     {
-      _rmsPercentChange = percentChange(_allResRmsAllS[iter],_allResRmsAllS[iter-1]);
+      _rmsPercentChange = percentChange(_allResRmsAllS[iter+1],_allResRmsAllS[iter]);
+      _rmsPercentChangeS[iter+1] = _rmsPercentChange;
     }
-    trace("_rmsPercentChangeS[iter+1] = "+_rmsPercentChangeS[iter]);
-    _rmsPercentChangeS[iter] = _rmsPercentChange;
   }
 
 
