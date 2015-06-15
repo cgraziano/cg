@@ -7,7 +7,7 @@ from edu.mines.jtk.dsp.Conv import *
 from edu.mines.jtk.sgl import *
 from edu.mines.jtk.awt.ColorMap import *
 from edu.mines.jtk.lapack import *
-from wwarp import WaveletWarpingCBGN, WaveletWarpingCBCyclic, WaveletWarpingCBCyclicOriginal, WaveletWarpingCA, Warper
+from wwarp import WaveletWarpingCBGN, WaveletWarpingCBCyclic, WaveletWarpingCA, Warper
 from wwarp import AmpSpectrum, ShapingFilter
 import synthetic
 import plotting
@@ -16,7 +16,9 @@ from java.util import Random
 ############################################################################
 
 def main(args):
-  estimateTwoWaveletsCycliclnt1D()
+  #estimateTwoWaveletsCycliclnt1D()
+  #estimateTwoWaveletsCycliclnt2D()
+  estimateTwoWaveletsCycliclnt3D()
   #estimateTwoWaveletsGNlnt()
 
 def estimateTwoWaveletsCycliclnt1D():
@@ -49,7 +51,7 @@ def estimateTwoWaveletsCycliclnt1D():
 
   #Estimate wavelet
   niter = 500
-  ww = WaveletWarpingCBCyclicOriginal()
+  ww = WaveletWarpingCBCyclic()
   ww.setMinPercentChange(0.01)
   ww.setTimeRange(tmin,tmax)
   ww.setStabilityFactor(0.000)
@@ -58,12 +60,13 @@ def estimateTwoWaveletsCycliclnt1D():
   bone[-kb] = 1.0
   bguess = copy(bone)
   hstabfact = 0.0
-  #hw =  ww.getWaveletC(nc,kc,nb,kb,bone,hstabfact,u,f,g)
   warp = Warper()
   sg = warp.applyS(u,g)
   nf = len(f)
   nsg = len(sg)
-  hw =  ShapingFilter.design(nc,kc,nsg,0,sg,nf,0,f)
+  hw =  ShapingFilter.design(tmin,tmax,nc,kc,nsg,0,sg,nf,0,f)
+  print "hw:" 
+  dump(hw)
 
 
   cguess = copy(hw)
@@ -227,7 +230,6 @@ def estimateTwoWaveletsCycliclnt1D():
   hint = None
   st = Sampling(nc,dt,kc*dti)
   plotting.plotWavelets(st,[ndw,ndk],hint=hint,hsize=hsize,vsize=vsize,linestyle=lineStyle,title=title,pngDir=pngDir,paper=True,twocol=True)
-
 
 def estimateTwoWaveletsCycliclnt2D():
   #Synthetic parameters
@@ -243,9 +245,10 @@ def estimateTwoWaveletsCycliclnt2D():
   nrmsg = nrmsf
 
   #Create synthetic f and g.
-  p,q,f,g,noisef,noiseg,u,tmin,tmax = synthetic.createSyntheticLn1D(freqc,decayc,mpc,\
-  freqd,decayd,mpd,r0,r1,v,nrmsf,nrmsg,nt,ni,randomi,moreps)
-  du = computeBackDiff(u)
+  nx = 1
+  p,q,f,g,noisef,noiseg,u,tmin,tmax = synthetic.createSyntheticLn2D(freqc,decayc,mpc,\
+  freqd,decayd,mpd,r0,r1,v,nrmsf,nrmsg,nx,nt,ni,randomi,moreps)
+  du = computeBackDiff2D(u)
 
   #Wavelet estimation parameters
   nc,kc = 81,-40# sampling for wavelet H 
@@ -259,7 +262,8 @@ def estimateTwoWaveletsCycliclnt2D():
 
   #Estimate wavelet
   niter = 500
-  ww = WaveletWarpingCBCyclicOriginal()
+  ww = WaveletWarpingCBCyclic()
+  ww.setParallel(True);
   ww.setMinPercentChange(0.01)
   ww.setTimeRange(tmin,tmax)
   ww.setStabilityFactor(0.000)
@@ -268,13 +272,13 @@ def estimateTwoWaveletsCycliclnt2D():
   bone[-kb] = 1.0
   bguess = copy(bone)
   hstabfact = 0.0
-  #hw =  ww.getWaveletC(nc,kc,nb,kb,bone,hstabfact,u,f,g)
   warp = Warper()
   sg = warp.applyS(u,g)
-  nf = len(f)
-  nsg = len(sg)
-  hw =  ShapingFilter.design(nc,kc,nsg,0,sg,nf,0,f)
-
+  nf = len(f[0])
+  nsg = len(sg[0])
+  hw =  ShapingFilter.design(tmin,tmax,nc,kc,nsg,0,sg,nf,0,f)
+  print "hw:" 
+  dump(hw)
 
   cguess = copy(hw)
   cbw = ww.getWaveletCInverseB(nb,kb,bguess,nc,kc,cguess,u,f,g,niter)
@@ -332,14 +336,16 @@ def estimateTwoWaveletsCycliclnt2D():
   #pngDir = None
   pngDir = directory
   dt = 0.004
+  dx = 0.015
   st = Sampling(nt,dt,0.0)
+  sx = Sampling(nx,dx,0.0)
   vmin,vmax = 0*dt,481*dt
-  hmin,hmax = -13.0,13.0
+  hmin,hmax = 0,(0.0+nx*dx)
   vlabel,vminmax,vint = "Time (s)",[vmin,vmax],0.5
-  hlabel,hminmax,hint = ["Amplitude","Amplitude","Amplitude","Amount of squeezing"],[[hmin,hmax],[hmin,hmax],[hmin,hmax],[0,3.5]],[3.0,3.0,3.0,1.0]
+  hlabel,hminmax,hint = ["Amplitude","Amplitude","Amplitude","Amount of squeezing"],[[hmin,hmax],[hmin,hmax],[hmin,hmax],[hmin,hmax]],3.0
   hsize,vsize = 960,560
   title= "f g sg dudt lnt one wavelet"
-  plotting.plotTracesSideBySide(st,[f,g,sg,du],\
+  plotting.plotImagesSideBySide(st,sx,[f,g,sg,du],\
   vlabel=vlabel,vminmax=vminmax,vint=vint,\
   hlabel=hlabel,hminmax=hminmax,hint=hint,\
   title=title,pngDir=pngDir,\
@@ -347,25 +353,18 @@ def estimateTwoWaveletsCycliclnt2D():
 
   pngDir = directory
   #pngDir = None
-  title= "[f,csbg] [f,hsg] lnt"
+  title= "f csbg hsg lnt"
   st = Sampling(nt,dt,0.0)
-  vmin,vmax = 0*dt,0.98
+  sx = Sampling(nx,dx,0.0)
+  vmin,vmax = 0*dt,481*dt
+  hmin,hmax = 0,(0.0+nx*dx)
   vlabel,vminmax,vint = "Time (s)",[vmin,vmax],0.5
-  hint1,hint2 = 0.5,1.0
-  hmin1,hmin2 = -1.0,-2.5
-  hmax1,hmax2 = 1.0,2.5
-  hlabel = ["Amplitude","Amplitude","Amplitude"]
-  hminmax = [[hmin2,hmax2],[hmin2,hmax2],[hmin2,hmax2]]
-  hint = [hint2,hint2,hint2]
-  color = [Color.BLACK,Color.RED]
+  hlabel,hminmax,hint = ["Amplitude","Amplitude","Amplitude"],[[hmin,hmax],[hmin,hmax],[hmin,hmax]],3.0
   hsize,vsize = 960,560
-  tilespacing = None
-  plotting.plot2TracesInSamePlotSideBySideWithOtherPlots(st,\
-  [[f,csbg],[f,hsg]],\
+  title= "f csbg hsg lnt one wavelet"
+  plotting.plotImagesSideBySide(st,sx,[f,csbg,hsg],\
   vlabel=vlabel,vminmax=vminmax,vint=vint,\
   hlabel=hlabel,hminmax=hminmax,hint=hint,\
-  color=color,\
-  tilespacing=tilespacing,\
   title=title,pngDir=pngDir,\
   paper=True,twocol=True)
 
@@ -437,6 +436,216 @@ def estimateTwoWaveletsCycliclnt2D():
   hint = None
   st = Sampling(nc,dt,kc*dti)
   plotting.plotWavelets(st,[ndw,ndk],hint=hint,hsize=hsize,vsize=vsize,linestyle=lineStyle,title=title,pngDir=pngDir,paper=True,twocol=True)
+
+def estimateTwoWaveletsCycliclnt3D():
+  #Synthetic parameters
+  nt,ni,randomi = 581,30,True# number of time samples in p and q; number of random impulses in p and q.
+  moreps = True 
+  r0,r1 = 3.15,1.55
+  v = 0.0#The amount of shift between p and q.
+  freqc,decayc = 0.16,0.07
+  freqd,decayd = 0.08,0.07
+  mpc = False#is wavelet in f mininmum phase?
+  mpd = False#is wavelet in g mininmum phase?
+  nrmsf = 0.0#0.4
+  nrmsg = nrmsf
+
+  #Create synthetic f and g.
+  nx2 = 50
+  nx1 = 50
+  p,q,f,g,noisef,noiseg,u,tmin,tmax = synthetic.createSyntheticLn3D(freqc,decayc,mpc,\
+  freqd,decayd,mpd,r0,r1,v,nrmsf,nrmsg,nx2,nx1,nt,ni,randomi,moreps)
+  du = computeBackDiff3D(u)
+
+  #Wavelet estimation parameters
+  nc,kc = 81,-40# sampling for wavelet H 
+  nd,kd = nc,kc
+  nb,kb = 5,-2#sampling for inverse wavelet A #Note ka<=kc 
+  sfac = 0.0
+
+  #set tmin and tmax 
+  tmin = tmin
+  tmax = tmax
+
+  #Estimate wavelet
+  niter = 500
+  ww = WaveletWarpingCBCyclic()
+  ww.setParallel(True);
+  ww.setMinPercentChange(0.01)
+  ww.setTimeRange(tmin,tmax)
+  ww.setStabilityFactor(0.000)
+  #First guesses of c and b. 
+  bone = zerofloat(nb)
+  bone[-kb] = 1.0
+  bguess = copy(bone)
+  hstabfact = 0.0
+  warp = Warper()
+  sg = warp.applyS(u,g)
+  nf = len(f[0])
+  nsg = len(sg[0])
+  hw =  ShapingFilter.design(tmin,tmax,nc,kc,nsg,0,sg,nf,0,f)
+  print "hw:" 
+  dump(hw)
+
+  cguess = copy(hw)
+  cbw = ww.getWaveletCInverseB(nb,kb,bguess,nc,kc,cguess,u,f,g,niter)
+  lastIter = ww.getLastIter()
+  print "lastIter = "+str(lastIter)
+  allResRmsAllS = ww.getAllResRmsS()
+  #Estimated Wavelets
+  cw = cbw[0]
+  bw = cbw[1]
+  dw = ww.getWaveletC(nb,kb,bw,nc,kc)
+
+  #Get know wavelets
+  ck = getWavelet(freqc,decayc,nc,kc,mpc)
+  dk = getWavelet(freqd,decayd,nd,kd,mpd)
+  bk = ww.getWaveletC(nc,kc,ck,nb,kb)
+
+  #Processing
+  warp = Warper()
+  bg = ww.applyC(nb,kb,bw,g)
+  sg = warp.applyS(u,g)
+  sbg = warp.applyS(u,bg)
+  csbg = ww.applyC(nc,kc,cw,sbg)
+  bone = zerofloat(nb)
+  bone[-kb] = 1.0
+  hstabfact = 0.0
+  hsg = ww.applyC(nc,kc,hw,warp.applyS(u,ww.applyC(nb,kb,bone,g)))
+
+  #Print
+  dt = 0.004
+  print "tmin: "+str(tmin)+" or "+str(tmin*dt)
+  print "tmax: "+str(tmax)+" or "+str(tmax*dt)
+  print "Number of time samples: "+str(nt)
+  print "Number of reflection coefficients in f between tmin and tmax: "+str(ni)
+  print "Random reflection coefficients: "+str(randomi)
+  print "Reflection coefficients exist past "+\
+  "tmax and corresponding u(tmax) in f and g, respecitively: "+str(moreps)
+  print "Initial amount of squeezing: "+str(r0)
+  print "Final amount of squeezing: "+str(r1)
+  print "Shift between f and g: "+str(v)
+  print "Wavelet c's peak frequency: "+str(freqc)
+  print "Wavelet d's peak frequency: "+str(freqd)
+  print "Wavelet c's decay: "+str(decayc)
+  print "Wavelet d's decay: "+str(decayd)
+  print "Wavelet c is minimum phase: "+str(mpc)
+  print "Wavelet d is minimum phase: "+str(mpd)
+  print "Noise to signal ratio in f and g: "+str(nrmsf)
+
+  #Plotting
+    #Data
+
+ #Plotting
+  #############1 Plot######################################
+  #directory = "./thesisFigures/3pt3/"
+  directory = None
+  #pngDir = None
+  pngDir = directory
+  """
+  dt = 0.004
+  dx = 0.015
+  st = Sampling(nt,dt,0.0)
+  sx = Sampling(nx,dx,0.0)
+  vmin,vmax = 0*dt,481*dt
+  hmin,hmax = 0,(0.0+nx*dx)
+  vlabel,vminmax,vint = "Time (s)",[vmin,vmax],0.5
+  hlabel,hminmax,hint = ["Amplitude","Amplitude","Amplitude","Amount of squeezing"],[[hmin,hmax],[hmin,hmax],[hmin,hmax],[hmin,hmax]],3.0
+  hsize,vsize = 960,560
+  title= "f g sg dudt lnt one wavelet"
+  plotting.plotImagesSideBySide(st,sx,[f,g,sg,du],\
+  vlabel=vlabel,vminmax=vminmax,vint=vint,\
+  hlabel=hlabel,hminmax=hminmax,hint=hint,\
+  title=title,pngDir=pngDir,\
+  paper=True,twocol=True)
+
+  pngDir = directory
+  #pngDir = None
+  title= "f csbg hsg lnt"
+  st = Sampling(nt,dt,0.0)
+  sx = Sampling(nx,dx,0.0)
+  vmin,vmax = 0*dt,481*dt
+  hmin,hmax = 0,(0.0+nx*dx)
+  vlabel,vminmax,vint = "Time (s)",[vmin,vmax],0.5
+  hlabel,hminmax,hint = ["Amplitude","Amplitude","Amplitude"],[[hmin,hmax],[hmin,hmax],[hmin,hmax]],3.0
+  hsize,vsize = 960,560
+  title= "f csbg hsg lnt one wavelet"
+  plotting.plotImagesSideBySide(st,sx,[f,csbg,hsg],\
+  vlabel=vlabel,vminmax=vminmax,vint=vint,\
+  hlabel=hlabel,hminmax=hminmax,hint=hint,\
+  title=title,pngDir=pngDir,\
+  paper=True,twocol=True)
+  """
+
+    #GN Meas
+  print "All RMS"
+  dump(allResRmsAllS)
+  pngDir = directory
+  #pngDir = None
+  title = "All Rms Residuals"
+  maxrmsri = 0.14#max(allResRmsAllS)#0.15
+  minrmsrf = 0.0#allResRmsAllS[lastIter]
+  siter = Sampling(niter+1,1.0,0.0)
+  color=[Color.BLACK,Color.RED]
+  vlabel,vminmax,vint = "RMS of all residuals",[minrmsrf,maxrmsri],None
+  hlabel,hminmax,hint = "Iterations",[0.0,lastIter],20.0
+  plotting.plotMeasInSamePlot(siter, [allResRmsAllS],\
+  color=color,\
+  vlabel=vlabel, vminmax=vminmax, vint=vint,\
+  hlabel=hlabel, hminmax=hminmax, hint=hint,\
+  title=title, pngDir=pngDir,\
+  paper=True,twocol=True)
+
+    #Normalize
+  nck = normalizeMAAWOS(ck)
+  ndk = normalizeMAAWOS(dk)
+  ncw = normalizeMAAWOS(cw)
+  ndw = normalizeMAAWOS(dw)
+  dump(ncw)
+  dti = dt
+
+  #"""
+  #Wavelet interpolation
+  error = 0.001
+  freq = 0.49
+  dt = 0.004
+  scale = 4
+  nc2 = scale*(nc-1)+1
+  #nb2 = scale*(nb-1)+1
+  dt2 = dt/scale
+  nck = interpolate(nc,kc,nck,dt,nc2,dt2,error,freq)
+  ndk = interpolate(nc,kc,ndk,dt,nc2,dt2,error,freq)
+  ncw = interpolate(nc,kc,ncw,dt,nc2,dt2,error,freq)
+  ndw = interpolate(nd,kc,ndw,dt,nc2,dt2,error,freq)
+  nc = nc2
+  #nb = nb2
+  dt = dt2
+  #"""
+
+  lineStyle = [PointsView.Line.NONE,PointsView.Line.SOLID,PointsView.Line.NONE]
+  #lineColor = [Color.BLACK,Color.BLACK,Color.BLACK]
+  #markStyle = [PointsView.Mark.NONE,PointsView.Mark.NONE,PointsView.Mark.NONE]
+  pngDir = directory
+  hsize = 960
+  vsize = 350
+  #pngDir = None     
+  title = "Known and Estimated c one wavelets lnt"
+  hint = None
+  st = Sampling(nc,dt,kc*dti)
+  plotting.plotWavelets(st,[ncw,nck],hint=hint,hsize=hsize,vsize=vsize,linestyle=lineStyle,title=title,pngDir=pngDir,paper=True,twocol=True)
+
+  lineStyle = [PointsView.Line.NONE,PointsView.Line.SOLID,PointsView.Line.NONE]
+  #lineColor = [Color.BLACK,Color.BLACK,Color.BLACK]
+  #markStyle = [PointsView.Mark.NONE,PointsView.Mark.NONE,PointsView.Mark.NONE]
+  pngDir = directory
+  hsize = 960
+  vsize = 350
+  #pngDir = None     
+  title = "Known and Estimated d one wavelets lnt"
+  hint = None
+  st = Sampling(nc,dt,kc*dti)
+  plotting.plotWavelets(st,[ndw,ndk],hint=hint,hsize=hsize,vsize=vsize,linestyle=lineStyle,title=title,pngDir=pngDir,paper=True,twocol=True)
+
 
 
 def estimateTwoWaveletsGNlnt():
@@ -3221,6 +3430,15 @@ def computeBackDiff2D(u):
   bd = zerofloat(nu1,nu2)
   for i in range(0,nu2):
     bd[i] = computeBackDiff(u[i])
+  return bd 
+def computeBackDiff3D(u):
+  nu3 = len(u)
+  nu2 = len(u[0])
+  nu1 = len(u[0][0])
+  bd = zerofloat(nu1,nu2,nu3)
+  for i3 in range(0,nu3):
+    for i2 in range(0,nu2):
+      bd[i3][i2] = computeBackDiff(u[i3][i2])
   return bd 
 
 def addZeros(x,nt):
