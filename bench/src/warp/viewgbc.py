@@ -1,10 +1,11 @@
 from imports import *
 
-datadir = "C:/Users/Chris/Documents/CWP/Research/research/gbc/dat"
+datadir = "/Users/Chris/data/gbc/dat"
 
 def main(args):
   print "Available Options: pp, ps1, ps2, shiftl, shiftc"
   view("pp")
+  view("ps1")
 
 def view(data):
   if data == "pp":
