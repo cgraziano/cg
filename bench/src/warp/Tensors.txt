@@ -1,0 +1,162 @@
+package warp;
+import edu.mines.jtk.awt.*; 
+import edu.mines.jtk.dsp.*;
+import edu.mines.jtk.interp.*; 
+import edu.mines.jtk.io.*;
+import edu.mines.jtk.mosaic.*;
+import edu.mines.jtk.ogl.Gl.*;
+import edu.mines.jtk.sgl.*;
+import edu.mines.jtk.util.*;
+import static edu.mines.jtk.util.ArrayMath.*;
+import edu.mines.jtk.mosaic.PixelsView.*;
+
+import java.awt.*;
+import java.awt.image.*;
+import java.io.*;
+import java.lang.*;
+import java.util.*;
+import java.nio.*;
+import javax.swing.*;
+
+import warp.PlotUtils;
+
+
+public class Tensors {
+  public static void createAndWriteTensors(String tensorFileDir, String tensorFileName, String datFileDir, String datFileName,
+      Sampling s1, Sampling s2, Sampling s3, float sigma1, float sigma2, float sigma3)
+  {
+    trace("Find .dat file and write tensors:");
+    float[][][] data = readImageFromDat(datFileDir,datFileName,s1.getCount(),s2.getCount(),s3.getCount());
+    goTensors(data,tensorFileDir,tensorFileName,sigma1,sigma2,sigma3);
+    trace("done");
+  }
+
+  public static void displayTensorsAndData(String tensorFileDir, String tensorFileName, String datFileDir, String datFileName, Sampling s1, Sampling s2, Sampling s3) 
+  {
+    trace("Display tensors and data:");
+    float[][][] data = readImageFromDat(datFileDir,datFileName,s1.getCount(),s2.getCount(),s3.getCount());
+    display(s1,s2,s3,data,tensorFileDir,tensorFileName);
+    trace("done");
+  }
+
+  public static void smoothDataWithTensorsAndWriteResult(String tensorFileDir, String tensorFileName, String smoothFileDir, String smoothFileName,
+      String datFileDir, String datFileName, Sampling s1, Sampling s2, Sampling s3, float smoothingDegree) 
+  {
+    trace("Smooth data with tensors and write result:");
+    float[][][] data = readImageFromDat(datFileDir,datFileName,s1.getCount(),s2.getCount(),s3.getCount());
+    ZeroMask zm = new ZeroMask(data);
+    float[][][] dataSmooth = goSmooth(data,smoothingDegree,tensorFileDir,tensorFileName);
+    zm.apply(0.0f,dataSmooth);
+    writeImage(smoothFileDir,smoothFileName,dataSmooth);
+    trace("done");
+  }
+
+  public static void displaySmoothData(String datDir, String datFileName, String smoothFileDir, String smoothFileName,Sampling s1, Sampling s2, Sampling s3) 
+  {
+    trace("Display smoothed data:");
+    int n1 = s1.getCount();
+    double dt1 = s1.getDelta();
+    float tmax = (float) ((float)((n1-1))*dt1);
+    float[][][] data = readImageFromDat(datDir,datFileName,s1.getCount(),s2.getCount(),s3.getCount());
+    float[][][] dataSmooth = readImageFromDat(smoothFileDir,smoothFileName,s1.getCount(),s2.getCount(),s3.getCount());
+    double clipSmooth = max(dataSmooth)*0.1;
+    double clip = max(data)*0.05;
+    PlotUtils.plotPP3(dataSmooth,s1,s2,s3,datFileName+" Smooth",datFileName+" time (s)",
+    -clipSmooth,clipSmooth,100,0.0,tmax);
+    PlotUtils.plotPP3(data,s1,s2,s3,datFileName,datFileName+" time (s)",
+    -clip,clip,100,0.0,tmax);
+    //showTwo(s1,s2,s3,data,dataSmooth)
+    trace("done");
+  }
+
+
+  public static void goTensors(float[][][] f, String tensorFileDir, String tensorFileName, float sigma1, float sigma2, float sigma3)
+  {
+    trace("Construct Local Orient Filter");
+    LocalOrientFilter lof = new LocalOrientFilter(sigma1,sigma2,sigma3);
+    trace("Apply Local Orient Filter");
+    EigenTensors3 et3 = lof.applyForTensors(f);
+    et3.invertStructure(0.0,2.0,4.0);
+    trace("Write Tensors");
+    writeTensors(tensorFileDir,tensorFileName,et3);
+  }
+
+  public static float[][][] goSmooth(float[][][] f, float smoothingDegree, String tensorFileDir, String tensorFileName)
+  {
+    EigenTensors3 et3 = readTensors(tensorFileDir,tensorFileName);
+    LocalSmoothingFilter lsf = LocalSmoothingFilter();
+    float[][][] g = copy(f);
+    lsf.apply(et3,smoothingDegree,f,g);
+    return g;
+  }
+    
+  public static void display(Sampling s1, Sampling s2, Sampling s3, float[][][] f, String tensorFileDir, String tensorFileName)
+  {
+    World world = new World();
+    Sampling s1 = Sampling(s1.getCount(),s1.getDelta()*1000,s1.getFirst());
+    ImagePanelGroup ipg = new ImagePanelGroup(s1,s2,s3,f);
+    double clip = max(f)*0.1;
+    ipg.setClips(-clip,clip);
+    world.addChild(ipg);
+    EigenTensors3 et3 = readTensors(tensorFileDir,tensorFileName);
+    PlotUtils.addTensorsInImage(s1,s2,s3,ipg.getImagePanel(Axis.X),et3,30);
+    PlotUtils.addTensorsInImage(s1,s2,s3,ipg.getImagePanel(Axis.Y),et3,30);
+    PlotUtils.addTensorsInImage(s1,s2,s3,ipg.getImagePanel(Axis.Z),et3,30);
+    Frame frame = PlotUtils.makeFrame(s1,s2,s3,world);
+  }
+
+  public static void showTwo(Sampling s1, Sampling s2, Sampling s3, float[][][] g1, float[][][] g2)
+  {
+    Sampling s1 = new Sampling(s1.getCount(),s1.getDelta()*1000,s1.getFirst());
+    SimpleFrame sf = new SimpleFrame();
+    double clip = max(g2)*0.1;
+    ImagePanels ipg1 = sf.addImagePanels(s1,s2,s3,g1);
+    ipg1.setClips(-clip,clip);
+    ImagePanels ipg2 = sf.addImagePanels(s1,s2,s3,g2);
+    ipg2.setClips(-clip,clip);
+    sf.orbitView.setScale(1.0);
+    sf.orbitView.setAxesScale(0.75,0.75,1.5);
+    sf.setSize(1250,900);
+  }
+    
+  public static void writeTensors(String tensorFileDir, String tensorFileName, EigenTensors3 tensors) 
+  {
+    FileOutputStream fos = FileOutputStream(tensorFileDir+tensorFileName+".dat");
+    ObjectOutputStream oos = ObjectOutputStream(fos);
+    oos.writeObject(tensors);
+    oos.close();
+  }
+
+  public static EigenTensors3 readTensors(String tensorFileDir, String tensorFileName)
+  {
+    FileInputStream fis = new FileInputStream(tensorFileDir+tensorFileName+".dat");
+    ObjectInputStream ois = new ObjectInputStream(fis);
+    EigenTensors3 tensors = ois.readObject();
+    ois.close();
+    return tensors;
+  }
+
+
+  public static void writeImage(String datDir, String fileName, float[][][] x)
+  {
+    trace(datDir+fileName+".dat");
+    ArrayOutputStream aos = new ArrayOutputStream(datDir+fileName+".dat");
+    aos.writeFloats(x);
+    aos.close();
+  }
+
+  public static float[][][] readImageFromDat(String datDir, String fileName, int n1, int n2, int n3) 
+  {
+    trace(fileName);
+    float[][][] x = zerofloat(n1,n2,n3);
+    ArrayInputStream ais = new ArrayInputStream(datDir+fileName+".dat");
+    ais.readFloats(x);
+    ais.close();
+    return x;
+  }
+
+  public static void trace(String s) {
+    System.out.println(s);
+  }
+
+}

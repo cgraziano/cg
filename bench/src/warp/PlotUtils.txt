@@ -1,0 +1,71 @@
+package warp;
+import edu.mines.jtk.awt.*; 
+import edu.mines.jtk.dsp.*;
+import edu.mines.jtk.dsp.Sampling;
+import edu.mines.jtk.interp.*; 
+import edu.mines.jtk.io.*;
+import edu.mines.jtk.mosaic.*;
+import edu.mines.jtk.ogl.Gl.*;
+import edu.mines.jtk.sgl.*;
+import edu.mines.jtk.util.*;
+import static edu.mines.jtk.util.ArrayMath.*;
+import edu.mines.jtk.mosaic.PixelsView.*;
+import viewer.*;
+
+public class PlotUtils {
+
+  public static void plotPP3(float[][][] f, Sampling s1, Sampling s2, Sampling s3, String title, String timeLabel1,
+            float clips1min, float clips1max, int cbw, float limits1min, float limits1max)
+  {
+    String cbar = "Amplitude";
+    double npng = 1.0;
+    double fw = 1.0;
+    double fh = 1.0;
+    PlotPanelPixels3.Orientation o = null;
+    Viewer3P v = new Viewer3P(s1,s2,s3,f,o);
+    v.setTitle(title);
+    v.setLabel1(timeLabel1);
+    v.setLabel2("Crossline (km)");
+    v.setLabel3("Inline (km)");
+    v.setClips1(clips1min,clips1max);
+    v.addColorBar("Amplitude");
+    v.setColorBarWidthMinimum(cbw);
+    v.setSize(900,1000);
+    v.setLimits1(limits1min,limits1max);
+    v.show();
+  }
+
+  public TensorsPanel addTensorsInImage(Sampling s1, Sampling s2, Sampling s3, ImagePanel ip, EigenTensors3 et, int esize)
+  {
+    TensorsPanel tp = new TensorsPanel(s1,s2,s3,et);
+    tp.setEllipsoidSize(esize);
+    ip.getFrame().addChild(tp);
+    return tp;
+  }
+
+  public SimpleFrame makeFrame(Sampling s1, Sampling s2, Sampling s3, World world)
+  {
+    int n1 = s1.getCount();
+    int n2 = s2.getCount();
+    int n3 = s3.getCount();
+    double d1 = s1.getDelta();
+    double d2 = s2.getDelta();
+    double d3 = s3.getDelta();
+    double f1 = s1.getFirst();
+    double f2 = s2.getFirst();
+    double f3 = s3.getFirst();
+    double l1 = s1.getLast();
+    double l2 = s2.getLast();
+    double l3 = s3.getLast();
+    SimpleFrame frame = new SimpleFrame(world);
+    OrbitView view = frame.getOrbitView();
+    view.setAxesScale(0.75,0.75,1.5);
+    view.setScale(1.0);
+    view.setAzimuth(-65.0);
+    view.setWorldSphere(new BoundingSphere(new BoundingBox(f3,f2,f1,l3,l2,l1)));
+    frame.getViewCanvas().setBackground(frame.getBackground());
+    frame.setSize(1250,900);
+    frame.setVisible(true);
+    return frame;
+  }
+}

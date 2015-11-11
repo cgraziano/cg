@@ -1,0 +1,101 @@
+/****************************************************************************
+Copyright (c) 2014, Colorado School of Mines and others. All rights reserved.
+This program and accompanying materials are made available under the terms of
+the Common Public License - v1.0, which accompanies this distribution, and is 
+available at http://www.eclipse.org/legal/cpl-v10.html
+****************************************************************************/
+package learning;
+
+import edu.mines.jtk.dsp.*;
+import static edu.mines.jtk.util.ArrayMath.*;
+/*
+ * Computes the P-wave reflection amplitude at an interface between
+ * two media.
+ * @author Chris Graziano
+ * @version August 21, 2015
+ */
+public class ReflectionAmplitude {
+
+  /**
+   * Calculates the P-wave reflection amplitude at an interface between
+   * two media. It is assumed that the percent changes in the elastic properties
+   * are small.
+   * From Aki and Richards (1980, p. 153)
+   * @param thetaIncidence P-waves angle of incidence 
+   * @param velP1 P-wave velocity of top layer.
+   * @param velS1 S-wave velocity of top layer.
+   * @param dens1  density  of top layer.
+   * @param velP2 P-wave velocity of bottom layer.
+   * @param velS2 S-wave velocity of bottom layer.
+   * @param dens2  density  of bottom layer.
+   */
+  public static calcPWaveReflectionAmplitude(
+    float thetaIncidence,
+    float velP1, float velS1, float dens1,
+    float velP2, float velS2, float dens2)
+  {
+    float deltaVelP = velP2-velP1;
+    float deltaVelS = velS2-velS1;
+    float deltaDens = dens2-dens1;
+    float velP = (velP2+velP1)*0.5f;
+    float velS = (velS2+velS1)*0.5f;
+    float dens = (dens2+dens1)*0.5f;
+    float thetaTransmission = asin(velP2*sin(thetatIncidence)/velP2);
+    float theta = (thetaIncidence+thetaTransmission)*0.5f;
+
+    float densTerm = deltaDens/dens;
+    float velSvelPRatioTerm = (velS*velS)/(velP*velP); 
+    float velPTerm = deltavelP/velP;
+    float velSTerm = deltavelS/velS;
+    float sinSquared = sin(theta)*sin(theta);
+    float secSquared = sec(theta)*sec(theta);
+
+    float firstTerm = 0.5*(1.0f-4.0f*velSvelPRatioTerm*sinSquared)*densTerm;
+    float secondTerm = 0.5*secSquared*velPTerm*-4.0*velSvelPRatioTerm*sinSquared*velSTerm;
+    float reflectionAmp = firstTerm+secondTerm;
+    return reflectionAmp;
+
+  }
+
+  /**
+   * Calculates the PS-wave reflection amplitude at an interface between
+   * two media. It is assumed that the percent changes in the elastic properties
+   * are small.
+   * From Aki and Richards (1980) 
+   * @param thetaIncidence P-waves angle of incidence 
+   * @param velP1 P-wave velocity of top layer.
+   * @param velS1 S-wave velocity of top layer.
+   * @param dens1  density  of top layer.
+   * @param velP2 P-wave velocity of bottom layer.
+   * @param velS2 S-wave velocity of bottom layer.
+   * @param dens2  density  of bottom layer.
+   */
+  public static calcPSWaveReflectionAmplitude(
+    float thetaIncidence,
+    float velP1, float velS1, float dens1,
+    float velP2, float velS2, float dens2)
+  {
+    float deltaVelP = velP2-velP1;
+    float deltaVelS = velS2-velS1;
+    float deltaDens = dens2-dens1;
+    float velP = (velP2+velP1)*0.5f;
+    float velS = (velS2+velS1)*0.5f;
+    float dens = (dens2+dens1)*0.5f;
+    float thetaTransmission = asin(velP2*sin(thetatIncidence)/velP2);
+    float theta = (thetaIncidence+thetaTransmission)*0.5f;
+
+    float densTerm = deltaDens/dens;
+    float velSvelPRatioTerm = (velS*velS)/(velP*velP); 
+    float velPTerm = deltavelP/velP;
+    float velSTerm = deltavelS/velS;
+    float sinSquared = sin(theta)*sin(theta);
+    float secSquared = sec(theta)*sec(theta);
+
+    float firstTerm = 0.5*(1.0f-4.0f*velSvelPRatioTerm*sinSquared)*densTerm;
+    float secondTerm = 0.5*secSquared*velPTerm*-4.0*velSvelPRatioTerm*sinSquared*velSTerm;
+    float reflectionAmp = firstTerm+secondTerm;
+    return reflectionAmp;
+
+  }
+}
+

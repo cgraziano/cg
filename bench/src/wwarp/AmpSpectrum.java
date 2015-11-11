@@ -62,6 +62,38 @@ public class AmpSpectrum {
     plotSpectrum(fs,amp,title,simplePlot,forSlide,forPrint,pngDir,fracWidth,fracHeight,aspectRatio);
   }
 
+  public void plotAmplitudeSpectrum(Sampling st, float[][] p, int itmin, int itmax, 
+    boolean simplePlot, boolean forSlide, boolean forPrint, String pngDir, String title,
+    double fracWidth, double fracHeight, double aspectRatio)
+  {
+    //Time sampling for the time window specified.
+    int nx = p.length;
+    int nt = itmax-itmin;
+    double dt = st.getDelta();
+    double ft = st.getValue(itmin);
+
+    float[][] subp = zerofloat(nt,nx);
+    Sampling subst = new Sampling(nt,dt,ft);
+    for (int ix=0; ix<nx; ++ix) 
+      for (int it=0; it<nt; ++it) 
+        subp[ix][it] = p[ix][itmin+it];
+
+    //Frequency sampling
+    int nfft = FftReal.nfftSmall(4*nt);//more time sample, the finer freq. samples
+    int nf = nfft/2+1;
+    double df = 1.0/(nfft*dt);
+    double ff = 0.0;
+    Sampling fs = new Sampling(nf,df,ff);
+    float[] amptest = computeAmplitudeSpectrum(subst,fs,nfft,subp[0]);
+    float[] amp = new float[amptest.length];
+    float[] subp1 = new float[nt];
+    for (int ix=0; ix<nx; ++ix) 
+      amp = add(amp,computeAmplitudeSpectrum(subst,fs,nfft,subp[ix]));
+
+    plotSpectrum(fs,amp,title,simplePlot,forSlide,forPrint,pngDir,fracWidth,fracHeight,aspectRatio);
+  }
+
+
 //private
 ////////////////////////////////////////////////////////////////////////////////////////////
   private float _amax;
@@ -87,11 +119,6 @@ public class AmpSpectrum {
     cf = cmul(cf,cmplx(cos(wft),sin(wft)));
 
     float[] af = cabs(cf);
-    //Amplitude spectrum normalized
-    if (_norm) {
-      float amax = max(max(af),FLT_EPSILON);
-      af = mul(1.0f/amax,af);
-    }
     return af;
   }
 
@@ -99,11 +126,21 @@ public class AmpSpectrum {
     boolean simplePlot, boolean forSlide, boolean forPrint, String pngDir,
     double fracWidth, double fracHeight, double aspectRatio) 
   {
+    //Amplitude spectrum normalized
+    System.out.println("dekunut");
+    dump(spec);
+    if (_norm) {
+      float amax = max(max(spec),FLT_EPSILON);
+      spec = mul(1.0f/amax,spec);
+    }
     SimplePlot sp = new SimplePlot(SimplePlot.Origin.LOWER_LEFT);
-    sp.setVLabel("Amplitude");
+    if (_norm)
+      sp.setVLabel("Amplitude (normalized)");
+    else
+      sp.setVLabel("Amplitude)");
     sp.setHLabel("Frequency (Hz)");
     sp.setVLimits(0,max(spec)+0.01);
-    sp.setSize(500,160);
+    sp.setSize(500,170);
 
     if (_maxset)
       sp.setVLimits(0,_amax);

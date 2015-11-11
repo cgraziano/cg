@@ -18,7 +18,7 @@ from java.util import Random
 
 
 def main(args):
-  #displaySimpleCaseOfWarpingWithWavelets()
+  displaySimpleCaseOfWarpingWithWavelets()
   #goWarpDifference2t()
   #goWarpDifferencelog()
   #goSimpleEstimate()
@@ -40,7 +40,7 @@ def main(args):
 #Displays the initial reflectivity sequence, the wavelet used, the synthetic seismogram,
 #wavelet distortion, and squeezed impulses.
 def displaySimpleCaseOfWarpingWithWavelets():
-#Synthetic parameters
+  #Synthetic parameters
   nt,ni,randomi = 481,2,True# number of time samples in p and q; number of random impulses in p and q.
   moreps = False 
   r0,r1 = 2.0,2.0#constant u'(t) $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$2.0
@@ -120,7 +120,7 @@ def displaySimpleCaseOfWarpingWithWavelets():
   hlabel = ["Amplitude","Amplitude"]
   hminmax = [[hmin,hmax],[hmin,hmax]]
   hint = [hint,hint]
-  hsize,vsize = 960,560
+  hsize,vsize = 960,460
   tilespacing = None
   plotting.plotTracesSideBySide(st,[p,q],\
   vlabel=vlabel,vminmax=vminmax,vint=vint,\
@@ -141,7 +141,7 @@ def displaySimpleCaseOfWarpingWithWavelets():
   hlabel = ["Amplitude","Amplitude"]
   hminmax = [[hmin,hmax],[hmin,hmax]]
   hint = [hint,hint]
-  hsize,vsize = 960,560
+  hsize,vsize = 960,460
   tilespacing = None
   plotting.plotTracesSideBySide(st,[p,sq],\
   vlabel=vlabel,vminmax=vminmax,vint=vint,\
@@ -585,7 +585,7 @@ def oneDNoNoiseHighSqueezingTwoWavelets():
   bPenaltyRes2NormSqFinaS = ww.getBPenaltyRes2NormSqFinalS()
   cPenaltyRes2NormSqInitS = ww.getCPenaltyRes2NormSqInitialS()
   cPenaltyRes2NormSqFinaS = ww.getCPenaltyRes2NormSqFinalS()
-  allResRmsAllS = ww.getAllResRmsAllS()
+  allResRmsAllS = ww.getAllResRmsS()
   allResRmsInitS = ww.getAllResRmsInitialS()
   allResRmsFinaS = ww.getAllResRmsFinalS()
   allRes2NormSqInitS = ww.getAllRes2NormSqInitialS()
@@ -1161,7 +1161,7 @@ def oneDNoiseHighSqueezingTwoWavelets():
   bPenaltyRes2NormSqFinaS = ww.getBPenaltyRes2NormSqFinalS()
   cPenaltyRes2NormSqInitS = ww.getCPenaltyRes2NormSqInitialS()
   cPenaltyRes2NormSqFinaS = ww.getCPenaltyRes2NormSqFinalS()
-  allResRmsAllS = ww.getAllResRmsAllS()
+  allResRmsAllS = ww.getAllResRmsS()
   allResRmsInitS = ww.getAllResRmsInitialS()
   allResRmsFinaS = ww.getAllResRmsFinalS()
   allRes2NormSqInitS = ww.getAllRes2NormSqInitialS()
@@ -1805,7 +1805,7 @@ def increaseBy1NoNoise():
 
     #Get iteration information
     lastIter = ww.getLastIter()
-    allResRmsAllS = ww.getAllResRmsAllS()
+    allResRmsAllS = ww.getAllResRmsS()
     allRmsResCB[i] = allResRmsAllS[lastIter]
     warp = Warper()
     sg = warp.applyS(u,g)
@@ -1914,7 +1914,7 @@ def increaseBy1Sinopec():
     #Get iteration information
     if (i != 0):
       lastIter = ww.getLastIter()
-      allResRmsAllS = ww.getAllResRmsAllS()
+      allResRmsAllS = ww.getAllResRmsS()
       allRmsResCB[i] = allResRmsAllS[lastIter]
     warp = Warper()
     sg = warp.applyS(u,g)
@@ -2042,7 +2042,7 @@ def increaseBy1UseOldSolutionToStartSinopec():
     if (i != 0 ):
       #Get iteration information
       lastIter = ww.getLastIter()
-      allResRmsAllS = ww.getAllResRmsAllS()
+      allResRmsAllS = ww.getAllResRmsS()
       allRmsResCB[i] = allResRmsAllS[lastIter]
     warp = Warper()
     sg = warp.applyS(u,g)
@@ -2212,7 +2212,7 @@ def goSinopecGN():
   bPenaltyRes2NormSqFinaS = ww.getBPenaltyRes2NormSqFinalS()
   cPenaltyRes2NormSqInitS = ww.getCPenaltyRes2NormSqInitialS()
   cPenaltyRes2NormSqFinaS = ww.getCPenaltyRes2NormSqFinalS()
-  allResRmsAllS = ww.getAllResRmsAllS()
+  allResRmsAllS = ww.getAllResRmsS()
   allResRmsInitS = ww.getAllResRmsInitialS()
   allResRmsFinaS = ww.getAllResRmsFinalS()
   allRes2NormSqInitS = ww.getAllRes2NormSqInitialS()
@@ -3022,7 +3022,7 @@ def goSinopecCyclic():
   cbw = ww.getWaveletCInverseB(nb,kb,bguess,nc,kc,cguess,u,f,g,niter)
   lastIter = ww.getLastIter()
   print "lastIter = "+str(lastIter)
-  allResRmsAllS = ww.getAllResRmsAllS()
+  allResRmsAllS = ww.getAllResRmsS()
   #Estimated Wavelets
   cw = cbw[0]
   bw = cbw[1]
@@ -4295,7 +4295,7 @@ def goSinopecGNAlphaAnalysis():
     bPenaltyRes2NormSqFinaS = ww.getBPenaltyRes2NormSqFinalS()
     cPenaltyRes2NormSqInitS = ww.getCPenaltyRes2NormSqInitialS()
     cPenaltyRes2NormSqFinaS = ww.getCPenaltyRes2NormSqFinalS()
-    allResRmsAllS = ww.getAllResRmsAllS()
+    allResRmsAllS = ww.getAllResRmsS()
     allResRmsInitS = ww.getAllResRmsInitialS()
     allResRmsFinaS = ww.getAllResRmsFinalS()
     allRes2NormSqInitS = ww.getAllRes2NormSqInitialS()

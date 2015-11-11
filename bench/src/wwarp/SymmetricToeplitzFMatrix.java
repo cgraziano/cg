@@ -6,6 +6,9 @@ available at http://www.eclipse.org/legal/cpl-v10.html
 ****************************************************************************/
 package wwarp;
 
+import static edu.mines.jtk.util.ArrayMath.*;
+
+
 /**
  * A symmetric Toeplitz matrix is a square matrix specified by one row.
  * Elements of a Toeplitz matrix are Aij = a[i-j]. In other words, all

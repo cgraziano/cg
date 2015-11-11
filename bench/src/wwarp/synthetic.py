@@ -12,34 +12,6 @@ def createSyntheticLn1D(freqc,decayc,mpc,freqd,decayd,mpd,
   g,noiseg = addNoise(nrmsg,43,g)
   return p,q,f,g,noisef,noiseg,u,itmin,itmax
 
-def createSyntheticLn2D(freqc,decayc,mpc,freqd,decayd,mpd,
-  r0,r1,v,nrmsf,nrmsg,nx,nt,ni,randomi,moreps):
-  u1,p1,q1,itmin,itmax = lnupq(r0,r1,v,nt,ni,randomi,moreps)
-  u = replicateTrace2D(nx,u1)
-  p = replicateTrace2D(nx,p1)
-  q = replicateTrace2D(nx,q1)
-  f = addWavelet2D(freqc,decayc,p,mpc)
-  g = addWavelet2D(freqd,decayd,q,mpd)
-  f,noisef = addNoise2D(nrmsf,42,f)
-  g,noiseg = addNoise2D(nrmsg,43,g)
-  print "itmin = "+str(itmin)
-  print "itmax = "+str(itmax)
-  return p,q,f,g,noisef,noiseg,u,itmin,itmax
-
-def createSyntheticLn3D(freqc,decayc,mpc,freqd,decayd,mpd,
-  r0,r1,v,nrmsf,nrmsg,nx2,nx1,nt,ni,randomi,moreps):
-  u1,p1,q1,itmin,itmax = lnupq(r0,r1,v,nt,ni,randomi,moreps)
-  u = replicateTrace3D(nx2,nx1,u1)
-  p = replicateTrace3D(nx2,nx1,p1)
-  q = replicateTrace3D(nx2,nx1,q1)
-  f = addWavelet3D(freqc,decayc,p,mpc)
-  g = addWavelet3D(freqd,decayd,q,mpd)
-  f,noisef = addNoise3D(nrmsf,42,f)
-  g,noiseg = addNoise3D(nrmsg,43,g)
-  print "itmin = "+str(itmin)
-  print "itmax = "+str(itmax)
-  return p,q,f,g,noisef,noiseg,u,itmin,itmax
-
 #Sets 2 impulses in p to always be at the same time.
 def createSyntheticLn1DSimple(freqc,decayc,mpc,freqd,decayd,mpd,
   r0,r1,v,nrmsf,nrmsg,nt,randomi,moreps):
@@ -59,6 +31,36 @@ def createSyntheticLn1DFilteredNoise(knoiseupper,width,freqc,decayc,mpc,freqd,de
   g,noiseg = addNoiseFiltered(knoiseupper,width,nrmsg,43,g)
   return p,q,f,g,noisef,noiseg,u,itmin,itmax
 
+
+def createSyntheticLn2D(freqc,decayc,mpc,freqd,decayd,mpd,
+  r0,r1,v,nrmsf,nrmsg,nx,nt,ni,randomi,moreps):
+  u1,p1,q1,itmin,itmax = lnupq(r0,r1,v,nt,ni,randomi,moreps)
+  u = replicateTrace(nx,u1)
+  p = replicateTrace(nx,p1)
+  q = replicateTrace(nx,q1)
+  f = addWavelet2D(freqc,decayc,p,mpc)
+  g = addWavelet2D(freqd,decayd,q,mpd)
+  f,noisef = addNoise2D(nrmsf,42,f)
+  g,noiseg = addNoise2D(nrmsg,43,g)
+  #dump(f)
+  print "itmin = "+str(itmin)
+  print "itmax = "+str(itmax)
+  return p,q,f,g,noisef,noiseg,u,itmin,itmax
+
+def createSyntheticLn2DSimple(freqc,decayc,mpc,freqd,decayd,mpd,
+  r0,r1,v,nrmsf,nrmsg,nx,nt,randomi,moreps):
+  u1,p1,q1,itmin,itmax = lnupqsimple(r0,r1,v,nt,randomi,moreps)
+  u = replicateTrace(nx,u1)
+  p = replicateTrace(nx,p1)
+  q = replicateTrace(nx,q1)
+  f = addWavelet2D(freqc,decayc,p,mpc)
+  g = addWavelet2D(freqd,decayd,q,mpd)
+  f,noisef = addNoise2D(nrmsf,42,f)
+  g,noiseg = addNoise2D(nrmsg,43,g)
+  #dump(f)
+  print "itmin = "+str(itmin)
+  print "itmax = "+str(itmax)
+  return p,q,f,g,noisef,noiseg,u,itmin,itmax
 
 def lnupq(r0,r1,v,nt,ni,randomi,moreps):
   umax = nt-1
@@ -233,7 +235,7 @@ def addWavelet(fpeak,decay,p,mp):
   print "w = "+str(w)
   print "r = "+str(r)
   a1,a2 = -2.0*r*cos(w),r*r
-  #print "a =",[1,a1,a2]
+  print "a1 =",[1,a1,a2]
   #poles = [Cdouble.polar(r,w),Cdouble.polar(r,-w),Cdouble.polar(r,w1),Cdouble.polar(r,-w1)]
   poles = [Cdouble.polar(r,w),Cdouble.polar(r,-w)]
   #poles = [Cdouble.polar(0.8,0)]
@@ -244,12 +246,13 @@ def addWavelet(fpeak,decay,p,mp):
   rcf = RecursiveCascadeFilter(poles,zeros,gain)
   #rcf.applyReverse(p,t)
   rcf.applyForward(p,t)
+  SimplePlot.asPoints(t)
   if not mp:
     w = 2.0*PI*(fpeak+0.04)
     print "w = "+str(w)
     print "r = "+str(r)
     a1,a2 = -2.0*r*cos(w),r*r
-    #print "a =",[1,a1,a2]
+    print "a2 =",[1,a1,a2]
     poles = [Cdouble.polar(r,w),Cdouble.polar(r,-w)]
     #poles = [Cdouble.polar(0.5,0)]
     zeros = []
@@ -257,6 +260,7 @@ def addWavelet(fpeak,decay,p,mp):
     rcf = RecursiveCascadeFilter(poles,zeros,gain)
     #rcf.applyForward(t,x)
     rcf.applyReverse(t,x)
+    SimplePlot.asPoints(x)
   else:
     copy(t,x)
   #conv(2,0,[1.0,-0.95],len(x),0,copy(x),len(x),0,x) # attenuate DC
@@ -269,15 +273,6 @@ def addWavelet2D(fpeak,decay,p,mp):
   f = zerofloat(nt,nx)
   for ix in range(0,nx):
     f[ix] = addWavelet(fpeak,decay,p[ix],mp)
-  return f
-def addWavelet3D(fpeak,decay,p,mp):
-  nx2 = len(p)
-  nx1 = len(p[0])
-  nt = len(p[0][0])
-  f = zerofloat(nt,nx1,nx2)
-  for ix2 in range(0,nx2):
-    for ix1 in range(0,nx1):
-      f[ix2][ix1] = addWavelet(fpeak,decay,p[ix2][ix1],mp)
   return f
 
 #Returns the signal added with noise and the noise that 
@@ -298,11 +293,10 @@ def addNoise(nrms, seed, f):
 #was added.
 def addNoise2D(nrms, seed, f):
   nx = len(f)
-  nt = len(f[0])
-  n = nx*nt
+  n = len(f[0])
   r = Random(seed)
-  g = mul(2.0,sub(randfloat(r,nt),0.5))
-  g2 = zerofloat(nt,nx)
+  g = mul(2.0,sub(randfloat(r,n),0.5))
+  g2 = zerofloat(n,nx)
   rgf = RecursiveGaussianFilter(1.0)
   rgf.apply1(g,g)
   frms = sqrt(sum(mul(f,f))/n)
@@ -313,26 +307,6 @@ def addNoise2D(nrms, seed, f):
   for i in range(0,nx):
     f[i] = add(f[i],g)
     g2[i] = g
-  return f,g2
-def addNoise3D(nrms, seed, f):
-  nx2 = len(f)
-  nx1 = len(f[0])
-  nt = len(f[0][0])
-  n = nx2*nx1*nt
-  r = Random(seed)
-  g = mul(2.0,sub(randfloat(r,nt),0.5))
-  g2 = zerofloat(nt,nx1,nx2)
-  rgf = RecursiveGaussianFilter(1.0)
-  rgf.apply1(g,g)
-  frms = sqrt(sum(mul(f,f))/n)
-  grms = sqrt(sum(mul(g,g))/n)
-  g = mul(g,nrms*frms/grms)
-  #print "nrms = "+str(nrms)
-  #print "rmsnoise/rmssignal = "+str(rms(g)/rms(f))
-  for i2 in range(0,nx2):
-    for i1 in range(0,nx1):
-      f[i2][i1] = add(f[i2][i1],g)
-      g2[i2][i1] = g
   return f,g2
 
 #Returns the signal added with noise and the noise that 
@@ -354,18 +328,11 @@ def addNoiseFiltered(knoiseupper,width,nrms, seed, f):
   return add(f,gfiltered),gfiltered
 
 #Copies the same trace to create a 2D image
-def replicateTrace2D(nx,f1):
+def replicateTrace(nx,f1):
   nt = len(f1)
   f = zerofloat(nt,nx)
   for i in range(0,nx):
-    f[i] = copy(f1)
-  return f
-def replicateTrace3D(nx2,nx1,f1):
-  nt = len(f1)
-  f = zerofloat(nt,nx1,nx2)
-  for i2 in range(0,nx2):
-    for i1 in range(0,nx1):
-      f[i2][i1] = copy(f1)
+    f[i] = f1
   return f
 
 def createSyntheticCos(freq,decay,mp,

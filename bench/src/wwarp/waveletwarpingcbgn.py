@@ -52,7 +52,7 @@ def main(args):
   #goTestLessSqueezingNbNhIncrease()
   #goTestNbNh2DIncrease()
   #goTestNbNhAll2DIncrease()
-  goSinopec1()
+  #goSinopec1()
   #goSinopec()
   #goAccumulateVsAntiAliasingDeltaFunctions()
   #testWarpingandBandPassFilter()

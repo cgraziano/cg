@@ -250,6 +250,9 @@ def plotMeasInSamePlot(sm, measures,
       pp.setTitle(title)
   if pngDir:
     if slide:
+      print "Triforce"
+      print "fracWidth = "+str(fracWidth)
+      print "fracHeight = "+str(fracHeight)
       pf.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
       pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"slide.png"
       pf.paintToPng(720.0,3.0,pngDir)
@@ -541,6 +544,135 @@ def plotWaveletsNoise(st, wavelets,
         pngDir = pngDir+title+"paper"+"twocol.png"
         sp.paintToPng(720.0,6.51,pngDir)
 
+def plotWaveletsNoiseRed(st, wavelets, 
+  hint=None,
+  linestyle=None,linecolor=None,markstyle=None,
+  dotsonsticks=None,
+  hsize=None, vsize=None,
+  title=None, pngDir=None,
+  slide=None, fracWidth=None, fracHeight=None, aspectRatio=None, 
+  paper=None, onecol=None, twocol=None):
+  sp = SimplePlot()
+  if linestyle:
+    ls = linestyle
+  else:
+    ls = [PointsView.Line.SOLID,PointsView.Line.NONE,PointsView.Line.NONE,PointsView.Line.NONE,PointsView.Line.NONE,PointsView.Line.NONE,PointsView.Line.NONE]
+  if linecolor:
+    lc = linecolor
+  else:
+    lc = [Color.RED,Color.BLACK,Color.GREEN,Color.BLUE,Color.CYAN,Color.PINK,Color.ORANGE]
+  if markstyle:
+    ms = markstyle
+  else:
+    ms = [PointsView.Mark.NONE,PointsView.Mark.FILLED_CIRCLE,PointsView.Mark.FILLED_CIRCLE,PointsView.Mark.FILLED_CIRCLE,PointsView.Mark.FILLED_CIRCLE,PointsView.Mark.FILLED_CIRCLE,PointsView.Mark.FILLED_CIRCLE]
+  nc = len(wavelets)
+  hsmax = 1.0
+  for ih in range(nc):
+    print "ih = "+str(ih)
+    pv = sp.addPoints(st,wavelets[ih])
+    pv.setLineStyle(ls[ih])
+    if ih==0:
+      pv.setLineColor(lc[ih])
+      pv.setLineWidth(3.0)
+    else:
+      pv.setMarkColor(lc[ih])
+    pv.setMarkStyle(ms[ih])
+    pv.setMarkSize(3.4)
+    hsmax = max(hsmax,abs(max(wavelets[ih])),abs(min(wavelets[ih])))
+  hmax = hsmax*1.05
+  sp.setVLimits(-1.1,1.1)
+  if hint:
+    sp.setHInterval(hint)
+  sp.setHLabel("Time (s)")
+  sp.setVLabel("Amplitude (normalized)")
+  if hsize and vsize:
+    sp.setSize(hsize,vsize)
+  else:
+    sp.setSize(960,560)
+  if title:
+    if pngDir==None:
+      sp.setTitle(title)
+  if pngDir:
+    if slide:
+      print "zz = "+str(aspectRatio)
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"slide.png"
+      sp.paintToPng(720.0,3.0,pngDir)
+    if paper:
+      if onecol:
+        sp.setFontSizeForPrint(8.0,222.0)
+        pngDir = pngDir+title+"paper"+"onecol.png"
+        sp.paintToPng(720.0,3.08,pngDir)
+      if twocol:
+        sp.setFontSizeForPrint(10.0,469.0)
+        pngDir = pngDir+title+"paper"+"twocol.png"
+        sp.paintToPng(720.0,6.51,pngDir)
+
+def plotWaveletsNoiseBlue(st, wavelets, 
+  hint=None,
+  linestyle=None,linecolor=None,markstyle=None,
+  dotsonsticks=None,
+  hsize=None, vsize=None,
+  title=None, pngDir=None,
+  slide=None, fracWidth=None, fracHeight=None, aspectRatio=None, 
+  paper=None, onecol=None, twocol=None):
+  sp = SimplePlot()
+  if linestyle:
+    ls = linestyle
+  else:
+    ls = [PointsView.Line.SOLID,PointsView.Line.NONE,PointsView.Line.NONE,PointsView.Line.NONE,PointsView.Line.NONE,PointsView.Line.NONE,PointsView.Line.NONE]
+  if linecolor:
+    lc = linecolor
+  else:
+    lc = [Color.BLUE,Color.BLACK,Color.GREEN,Color.BLUE,Color.CYAN,Color.PINK,Color.ORANGE]
+  if markstyle:
+    ms = markstyle
+  else:
+    ms = [PointsView.Mark.NONE,PointsView.Mark.FILLED_CIRCLE,PointsView.Mark.FILLED_CIRCLE,PointsView.Mark.FILLED_CIRCLE,PointsView.Mark.FILLED_CIRCLE,PointsView.Mark.FILLED_CIRCLE,PointsView.Mark.FILLED_CIRCLE]
+  nc = len(wavelets)
+  hsmax = 1.0
+  for ih in range(nc):
+    print "ih = "+str(ih)
+    pv = sp.addPoints(st,wavelets[ih])
+    pv.setLineStyle(ls[ih])
+    if ih==0:
+      pv.setLineColor(lc[ih])
+      pv.setLineWidth(3.0)
+    else:
+      pv.setMarkColor(lc[ih])
+    pv.setMarkStyle(ms[ih])
+    pv.setMarkSize(3.4)
+    hsmax = max(hsmax,abs(max(wavelets[ih])),abs(min(wavelets[ih])))
+  hmax = hsmax*1.05
+  sp.setVLimits(-1.1,1.1)
+  if hint:
+    sp.setHInterval(hint)
+  sp.setHLabel("Time (s)")
+  sp.setVLabel("Amplitude (normalized)")
+  if hsize and vsize:
+    sp.setSize(hsize,vsize)
+  else:
+    sp.setSize(960,560)
+  if title:
+    if pngDir==None:
+      sp.setTitle(title)
+  if pngDir:
+    if slide:
+      print "zz = "+str(aspectRatio)
+      sp.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"slide.png"
+      sp.paintToPng(720.0,3.0,pngDir)
+    if paper:
+      if onecol:
+        sp.setFontSizeForPrint(8.0,222.0)
+        pngDir = pngDir+title+"paper"+"onecol.png"
+        sp.paintToPng(720.0,3.08,pngDir)
+      if twocol:
+        sp.setFontSizeForPrint(10.0,469.0)
+        pngDir = pngDir+title+"paper"+"twocol.png"
+        sp.paintToPng(720.0,6.51,pngDir)
+
+
 
 #Example of parameters to set
 """
@@ -593,6 +725,7 @@ def plotImagesSideBySide(st, sx, images,
   if hsize and vsize:
     pf.setSize(hsize,vsize)
   else:
+    #pf.setSize(740,560)
     pf.setSize(740,560)
   if title:
     if pngDir==None:
@@ -613,6 +746,80 @@ def plotImagesSideBySide(st, sx, images,
         pf.paintToPng(720.0,6.51,pngDir)
   pf.setVisible(True)
   pf.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+
+#Example of parameters to set
+"""
+pngDir = "./report15/synthetics/"
+title= "testsino"
+vmin,vmax = tmin*dt,tmax*dt
+hmin,hmax = None,None
+vlabel,vminmax,vint = "time (s)",[vmin,vmax],1.0
+hlabel,hminmax,hint = ["f","csbg","hsg","sg"],None,0.015
+clip = 2
+"""
+def plotImagesSideBySideNMO(st, sx, images, 
+  vlabel=None, vminmax=None, vint=None, 
+  hlabel=None, hminmax=None, hint=None,
+  tilespacing=None,
+  hsize=None, vsize=None,
+  clip=None,
+  title=None, pngDir=None,
+  slide=None, fracWidth=None, fracHeight=None, aspectRatio=None, 
+  paper=None, onecol=None, twocol=None):
+
+  nimages = len(images)
+  pvs = list()
+  #Build list of PixelsViews
+  for itrace in range(0,nimages):
+    pvs.append(PixelsView(st,sx,images[itrace]))
+  for itrace in range(0,nimages):
+    pvs[itrace].setOrientation(PixelsView.Orientation.X1DOWN_X2RIGHT)
+    if clip:
+      pvs[itrace].setClips(-clip,clip)
+  pp = PlotPanel(1,nimages,PlotPanel.Orientation.X1DOWN_X2RIGHT,PlotPanel.AxesPlacement.LEFT_TOP)
+  if tilespacing:
+    mosaic = pp.getMosaic()
+    mosaic.setWidthTileSpacing(tilespacing)
+  if vlabel:
+    pp.setVLabel(vlabel)
+  if vminmax:
+    pp.setVLimits(vminmax[0],vminmax[1])
+  if vint:
+    pp.setVInterval(vint)
+  for itrace in range(0,nimages):
+    if hlabel:
+      pp.setHLabel(itrace,hlabel[itrace])
+    if hminmax:
+      pp.setHLimits(itrace,hminmax[itrace][0],hminmax[itrace][1])
+    if hint:
+      pp.setHInterval(itrace,hint)
+    pp.addTiledView(0,itrace,pvs[itrace])
+  pf = PlotFrame(pp)
+  if hsize and vsize:
+    pf.setSize(hsize,vsize)
+  else:
+    #pf.setSize(740,560)
+    pf.setSize(480,560)
+  if title:
+    if pngDir==None:
+      pp.setTitle(title)
+  if pngDir:
+    if slide:
+      pf.setFontSizeForSlide(fracWidth,fracHeight,aspectRatio)
+      pngDir = pngDir+title+"w"+str(fracWidth)+"h"+str(fracHeight)+"slide.png"
+      pf.paintToPng(720.0,3.0,pngDir)
+    if paper:
+      if onecol:
+        pf.setFontSizeForPrint(10.0,222.0)
+        pngDir = pngDir+title+"paper"+"onecol.png"
+        pf.paintToPng(720.0,3.08,pngDir)
+      if twocol:
+        pf.setFontSizeForPrint(10.0,469.0)
+        pngDir = pngDir+title+"paper"+"twocol.png"
+        pf.paintToPng(720.0,6.51,pngDir)
+  pf.setVisible(True)
+  pf.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+
 
 def plotImagesSideBySideDU(st, sx, images, 
   vlabel=None, vminmax=None, vint=None, 

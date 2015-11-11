@@ -1,0 +1,3 @@
+Notes on this run.
+
+penalty was not enabled until 81, it did not help and actually caused the algorithm to revert back to iteration 80, the lowest RMS value before the penalty was enabled.

@@ -6,6 +6,7 @@ from imports import *
 
 from edu.mines.jtk.dsp.Conv import *
 from warp import NormalMoveout,WaveletNmo
+import plotting
 
 #############################################################################
 
@@ -13,7 +14,7 @@ from warp import NormalMoveout,WaveletNmo
 pngDir = None
 
 def main(args):
-  goEstimateWaveletFromGather(args[1])
+  goEstimateWaveletFromGather("synr")
 
 def goEstimateWaveletFromGather(name):
   """ Estimates wavelet from a gather sampled in time and offset """
@@ -55,7 +56,7 @@ def goEstimateWaveletFromGather(name):
     tran,tbed = True,True
     nref,vnmo = 40,2.0 # number of reflectors and NMO velocity
     freq,decay = 20.0,0.05 # peak frequency and decay for wavelet
-   fmin,fmax,sfac = 0.0,50.0,1.0001
+    fmin,fmax,sfac = 0.0,50.0,1.0001
     texp,tbal = 0.00,0
     tmin,tmax,perc = 0.15,1.75,100.0
     zp = True # zero-phase?
@@ -95,6 +96,51 @@ def goEstimateWaveletFromGather(name):
   alist = [apef,anmo]
   hlist = [hpef,hnmo]
   tlist = ["PEF","NMO"]
+  
+  directory = "./thesisFiguresSlides/nmo/"
+  fracWidth,fracHeight,aspectRatio = 0.9,0.8,16.0/9.0
+  pngDir = directory
+  #pngDir = None
+  title= "Nmo correction" 
+  print title
+  vmin,vmax = tmin,tmax
+  vlabel,vminmax,vint = "Time (s)",[vmin,vmax],0.5
+  hlabel = ["Offset (km)","Offset (km)"]
+  hminmax = None
+  hint = 0.5
+  tilespacing = None
+  clip = 3.0
+  plotting.plotImagesSideBySideNMO(st,sx,[e],\
+  vlabel=vlabel,vminmax=vminmax,vint=vint,\
+  hlabel=hlabel,hminmax=hminmax,hint=hint,\
+  clip = clip,\
+  tilespacing = tilespacing,\
+  title=title,pngDir=pngDir,\
+  slide=True,fracWidth=fracWidth,fracHeight=fracHeight,aspectRatio=aspectRatio)
+
+
+  directory = "./thesisFiguresSlides/nmo/"
+  fracWidth,fracHeight,aspectRatio = 0.9,0.8,16.0/9.0
+  pngDir = directory
+  #pngDir = None
+  title= "Nmo cmp" 
+  print title
+  vmin,vmax = tmin,tmax
+  vlabel,vminmax,vint = "Time (s)",[vmin,vmax],0.5
+  hlabel = ["Offset (km)","Offset (km)"]
+  hminmax = None
+  hint = 0.5
+  tilespacing = None
+  clip = 3.0
+  plotting.plotImagesSideBySideNMO(st,sx,[f],\
+  vlabel=vlabel,vminmax=vminmax,vint=vint,\
+  hlabel=hlabel,hminmax=hminmax,hint=hint,\
+  clip = clip,\
+  tilespacing = tilespacing,\
+  title=title,pngDir=pngDir,\
+  slide=True,fracWidth=fracWidth,fracHeight=fracHeight,aspectRatio=aspectRatio)
+
+
   for ia in range(0,len(alist)):
     a = alist[ia]
     h = hlist[ia]

@@ -76,6 +76,12 @@ public class Warper {
   public float[][] getWarpingStages() {
     return new float[][]{_ug,_wug,_lwug,_dlwug};
   }
+  /**
+   * Returns lg, wlg
+   */
+  public float[][] getOldWarpingStages() {
+    return new float[][]{_lg,_wlg};
+  }
 
   public float getSamplingIntervalScaleFactor() {
     return _r;
@@ -103,14 +109,6 @@ public class Warper {
 //trace("r = "+r);
     return applyS(r,u,g);
   }
-  public float[] applyS(float[] u, float[] uu, float[] g) {
-    float r = (float)((int)(squeezing(1.0f,u)+0.999f));//Round up to the nearest integer.
-    _r = r;
-//r = 3.0f;
-//trace("r = "+r);
-    return applyS(r,u,g);
-  }
-
   public float[] applyS(float r,float[] u, float[] g) {
     int ng = g.length;
     int nu = u.length;
@@ -138,7 +136,6 @@ public class Warper {
       return wg;
     }
   }
-
   public float[][] applyS(float[][] u, float[][] g) {
     int n2 = u.length;
     int n1 = u[0].length;
@@ -146,24 +143,6 @@ public class Warper {
     for (int i2=0; i2<n2; ++i2) {
       sg[i2] = applyS(u[i2],g[i2]);
     }
-    return sg;
-  }
-  public float[][][] applyS(final float[][][] u, final float[][][] g) {
-    final int n3 = u.length;
-    final int n2 = u[0].length;
-    final int n1 = u[0][0].length;
-    final float[][][] sg = new float[n3][n2][n1];
-    Parallel.loop(n3,new Parallel.LoopInt() 
-    {
-      public void compute(int i3) 
-      {
-
-    //for (int i3=0; i3<n3; ++i3) {
-      for (int i2=0; i2<n2; ++i2) {
-        sg[i3][i2] = applyS(u[i3][i2],g[i3][i2]);
-      }
-      }
-    });
     return sg;
   }
 
@@ -272,6 +251,7 @@ public class Warper {
           g[i+it*r] = gtemp[i][it];
         }
       }
+      //trace("sinc max length = "+_si.getMaximumLength());
       return g;
   }
   public float[][] upSample(
@@ -447,8 +427,12 @@ public class Warper {
    */
   public float[] applyOldS(float[] u, float[] x) {
     float r = (float)((int)(squeezing(1.0f,u)+0.999f));//Round up to the nearest integer.
+    trace("squeezing = "+squeezing(1.0f,u));
+    trace("r = "+r);
     float[] lx = applyL(r,u,x);
     float[] wlx = applyW(u,lx);
+    _lg = lx;
+    _wlg = wlx;
     return wlx;
   }
 
@@ -464,6 +448,7 @@ public class Warper {
   private static final SincInterp _si = SincInterp.fromErrorAndFrequency(0.01,0.40);
   private static final LinearInterpolator _li = new LinearInterpolator();
   private float[] _ug, _wug, _lwug, _dlwug;
+  private float[] _lg, _wlg;
   
 
   /**

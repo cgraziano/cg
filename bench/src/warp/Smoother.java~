@@ -1,0 +1,71 @@
+package warp;
+
+import edu.mines.jtk.awt.*; 
+import edu.mines.jtk.dsp.*;
+import edu.mines.jtk.interp.*; 
+import edu.mines.jtk.io.*;
+import edu.mines.jtk.mosaic.*;
+import edu.mines.jtk.ogl.Gl.*;
+import edu.mines.jtk.sgl.*;
+import edu.mines.jtk.util.*;
+import static edu.mines.jtk.util.ArrayMath.*;
+import edu.mines.jtk.mosaic.PixelsView.*;
+
+import warp.SegyReaderWriterAndConverter;
+
+
+public class Smoother {
+  /*public static void main(String[] args) {
+    //Specify locations of created folders
+    String foldersDir = "C:/data/BellCreek/";
+    String datDir = foldersDir+"dat/";
+    String sgyDir = foldersDir+"sgy/";
+    String writtenSgyDir = foldersDir+"writtenSgy/";
+    String tensorDir = foldersDir+"tensors/";
+    String smoothDir = foldersDir+"smooth/";
+
+    //Specify the name of the .sgy file
+    String sgyFileName = "3D_PPstk";
+
+    //Specify inline and crossline byte location
+    inlineByteLocation = 9;
+    crosslineByteLocation = 13;
+
+  }*/
+  
+  public Smoother(
+      String foldersDir, String datDir, String sgyDir, String writtenSgyDir, String tensorDir, String smoothDir, String sgyFileName, 
+      int inlineByteLocation, int crosslineByteLocation,
+      float sigma1, float sigma2, float sigma3, float smoothingDegree)
+  {
+    _foldersDir = foldersDir;
+    _datDir = datDir;
+    _sgyDir = sgyDir;
+    _writtenSgyDir = writtenSgyDir;
+    _tensorDir = tensorDir;
+    _smoothDir = smoothDir;
+    _sgyFileName = sgyFileName;
+    _inlineByteLocation = inlineByteLocation;
+    _crosslineByteLocation = crosslineByteLocation;
+    _smoothingDegree = smoothingDegree;
+    _srwc = new SegyReaderWriterAndConverter(_sgyDir,_sgyFileName,_inlineByteLocation,_crosslineByteLocation,_datDir,_datFileName);
+  }
+
+  public void convertSGYFileToDatFile() {
+    _srwc.convertSgyToDat();
+  }
+
+  //public createAndWriteTensors() {
+
+  //}
+
+  public void smooth() {
+  }
+
+  private String _foldersDir, _datDir, _sgyDir, _writtenSgyDir, _tensorDir, _smoothDir, _sgyFileName; 
+  private String _datFileName, _writtenDatFileName, _writtenSgyFileName;
+  private String _tensorFileName, _smoothFileName; 
+  private int _inlineByteLocation, _crosslineByteLocation;
+  private float _sigma1, _sigma2, _sigma3, _smoothingDegree;
+  private SegyReaderWriterAndConverter _srwc;
+}
